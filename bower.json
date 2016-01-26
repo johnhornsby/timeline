@@ -1,0 +1,23 @@
+{
+  "name": "timeline",
+  "version": "1.0.0",
+  "description": "Agnostic logic for managing a timeline, adding keyframes and tweening between them.",
+  "main": [
+    "lib/timeline.js"
+  ],
+  "authors": [
+    "John Hornsby <john.hornsby@sequence.co.uk>"
+  ],
+  "license": "MIT",
+  "ignore": [
+    "**/.*",
+    "dev",
+    "lib",
+    "node_modules",
+    "src",
+    ".babelrc",
+    ".gitignore",
+    "package.json",
+    "webpack.config.js"
+  ]
+}
