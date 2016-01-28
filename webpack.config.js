@@ -1,9 +1,10 @@
 module.exports = {
-	entry: "./src/timeline.js",
+	entry: "./src/index.js",
 	output: {
 		libraryTarget: "umd",
 		path: __dirname + "/dist",
-		filename: "timeline.js"
+		filename: "timeline.js",
+		library: "Timeline"
 	},
 	module: {
 	  loaders: [
