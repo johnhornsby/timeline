@@ -206,17 +206,26 @@ return /******/ (function(modules) { // webpackBootstrap
 		"in": 0,
 		out: null,
 		duration: null,
-		scale: 1
+		fillMode: 0
 	};
 
 	var Tween = (function () {
+		_createClass(Tween, null, [{
+			key: "FILL_MODE",
+			value: {
+				NOME: 0,
+				FORWARD: 1,
+				BACKWARD: 2,
+				BOTH: 3
+			},
+			enumerable: true
+		}]);
+
 		function Tween(propertyKeyframes, identifier, options) {
 			_classCallCheck(this, Tween);
 
 			this._propertyKeyframesMap = null;
-
 			this._identifier = null;
-
 			this._options = null;
 
 			this._init(propertyKeyframes, identifier, options);
@@ -246,31 +255,117 @@ return /******/ (function(modules) { // webpackBootstrap
 				this._propertyKeyframesMap = new Map();
 
 				Object.keys(propertyKeyframes).map(function (key, index) {
-					_this._propertyKeyframesMap.set(key, propertyKeyframes[key]);
+
+					var keyframes = _this._validateKeyframes(propertyKeyframes[key]);
+
+					_this._propertyKeyframesMap.set(key, keyframes);
 				});
+			}
+		}, {
+			key: "_validateKeyframes",
+			value: function _validateKeyframes(keyframes) {
+
+				var keyframesCloned = keyframes.map(function (keyframe) {
+					return _extends({}, keyframe, {
+						type: "external"
+					});
+				});
+
+				// have we an initial keyframe, if not then inset an internal one
+				if (keyframesCloned[0].time !== 0) {
+					keyframesCloned.unshift({
+						value: keyframesCloned[0].value,
+						time: 0,
+						type: "internal-start"
+					});
+				}
+
+				return keyframesCloned;
 			}
 		}, {
 			key: "_updateDuration",
 			value: function _updateDuration() {
 				var _this2 = this;
 
-				this._duration = 0;
+				var keyframeDuration = 0;
+				var inIndex = -1;
 
 				this._propertyKeyframesMap.forEach(function (keyframes, key) {
 					keyframes.forEach(function (keyframe, index) {
-						_this2._duration = Math.max(_this2._duration, keyframe.time);
+						keyframeDuration = Math.max(keyframeDuration, keyframe.time);
 					});
 				});
+
+				if (this._options["in"] == null) {
+					this._options["in"] = 0;
+				} else {
+
+					//@ we need to check for loop before we extrapolate the next or previous keyframe value, if we are looping and
+					// or there is one before we need to tween this value. only extrapolate if no loop and no before.
+
+					// we need to use the getTweenValue but force it to ignore the in and out points.
+					// check to actualy see if this matters.
+
+					this._propertyKeyframesMap.forEach(function (keyframes, key) {
+						for (var i = 0; i < keyframes.length; i++) {
+							if (_this2._options["in"] === keyframes[i].time) {
+								// no need to insert
+								break;
+							} else if (_this2._options["in"] < keyframes[i].time) {
+								keyframes.splice(i, 0, {
+									value: keyframes[i].value,
+									time: _this2._options["in"],
+									type: "internal-in"
+								});
+								break;
+							}
+						}
+					});
+				}
+
+				if (this._options.out != null && this._options.duration != null) {
+					throw Error("specify either and out time or duration, not both!");
+				}
+
+				if (this._options.duration != null) {
+					this._options.out = this._options["in"] + this._options.duration;
+				} else {
+					this._options.duration = keyframeDuration;
+				}
+
+				if (this._options.out != null) {
+					this._options.duration = this._options.out - this._options["in"];
+
+					this._propertyKeyframesMap.forEach(function (keyframes, key) {
+						for (var i = keyframes.length - 1; i > -1; i--) {
+							if (_this2._options.out === keyframes[i].time) {
+								// no need to insert
+								break;
+							} else if (_this2._options.out > keyframes[i].time) {
+								keyframes.splice(i, 0, {
+									value: keyframes[i].value,
+									time: _this2._options.out,
+									type: "internal-out"
+								});
+								break;
+							}
+						}
+					});
+				} else {
+					this._options.out = this._options["in"] + this._options.duration;
+				}
+
+				if (this._options["in"] > this._options.out) {
+					throw Error("tween in is greater than out!");
+				}
 			}
+		}, {
+			key: "_searchForKeyframeByTime",
+			value: function _searchForKeyframeByTime() {}
 		}, {
 			key: "_getState",
 			value: function _getState(time) {
 				var _this3 = this;
-
-				if (this._loop) {
-					// wrap time
-					time = (time % this._duration + this._duration) % this._duration;
-				}
 
 				var propertiesStateObject = {};
 
@@ -283,49 +378,71 @@ return /******/ (function(modules) { // webpackBootstrap
 		}, {
 			key: "_getTweenValue",
 			value: function _getTweenValue(keyframes, time) {
-				var value = undefined;
+				var value = null;
 				// interate over keyframes untill we find the exact value or keyframes either side
 				var length = keyframes.length;
 				var keyframe = undefined,
 				    keyframeValue = undefined;
 				var lastKeyframe = undefined;
+
+				// the aim here is to find the keyframe to either side of the time value
+
+				var previousKeyframe = null;
+				var nextKeyframe = null;
+
 				for (var i = 0; i < length; i++) {
 					keyframe = keyframes[i];
 					keyframeValue = keyframe.value;
-					if (time === keyframe.time) {
-						// time matches keyframe exactly
-						value = keyframeValue;
-						break;
-					} else if (time > keyframe.time) {
 
-						if (this._loop && length > 1 && i === length - 1) {
-							// if time is beyond the last keyframe && if the keyframe is not the only one then tween between last and first
-							var firstKeyframe = keyframes[0];
-							value = this._tweenBetweenKeyframes(keyframe, firstKeyframe, time);
-							break;
-						} else {
-							// time is beyond keyframe, save as last and move on
-							value = keyframeValue;
-							lastKeyframe = keyframe;
-						}
-					} else if (time < keyframe.time) {
-						if (i === 0) {
-							// if next keyframe is not the only one then tween between last and first
-							if (this._loop && length > 1) {
-								lastKeyframe = keyframes[length - 1];
-								value = this._tweenBetweenKeyframes(lastKeyframe, keyframe, time);
-							} else {
-								// first keyframe time is beyond keyframe.time, use this value
-								value = keyframeValue;
+					if (time === keyframe.time) {
+						previousKeyframe = nextKeyframe = keyframe;
+						break; // break here as we have found all we need
+					} else if (time > keyframe.time && keyframe.time > this._options["in"]) {
+							previousKeyframe = keyframe;
+							// no need to break here as we continue iterating through keyFrames to find the keyframe just previous to the time value
+						} else if (time < keyframe.time && keyframe.time < this._options.out) {
+								nextKeyframe = keyframe;
+								break; // break here has we have gone far enough to get the next keyFrame
 							}
-							break;
+				}
+
+				// If previous or next are null then the time specified is outside of the tween range
+
+				if (time > this._options.out) {
+					if (this._options.fillMode === Tween.FILL_MODE.FORWARD || this._options.fillMode === Tween.FILL_MODE.BOTH) {
+						if (this._options.loop) {
+							// wrap the time and recurcively call _getTweenValue with valid wrapped time
+
+							time = ((time - this._options["in"]) % this._options.duration + this._options.duration) % this._options.duration;
+
+							value = this._getTweenValue(keyframes, time);
 						} else {
-							// we have now clarified that the time is between two keyframes, this is where we tween
-							value = this._tweenBetweenKeyframes(lastKeyframe, keyframe, time);
-							break;
+							// no loop then aquire the last keyframe within in and out? maybe use the internal out keyframe
+							value = keyframes[length - 1].value;
+						}
+					} else {
+						// RETURN NULL FOR VALUE
+					}
+				} else if (time < this._options["in"]) {
+						if (this._options.fillMode === Tween.FILL_MODE.BACKWARD || this._options.fillMode === Tween.FILL_MODE.BOTH) {
+							if (this._options.loop) {
+								// wrap the time and call _getTweenValue with valid wrapped time
+								time = ((time - this._options["in"]) % this._options.duration + this._options.duration) % this._options.duration;
+
+								value = this._getTweenValue(keyframes, time);
+							} else {
+								// no loop then aquire the first ketframe within in and out? maybe use the internal in keyframe
+								value = keyframes[0].value;
+							}
+						} else {
+							// RETURN NULL FOR VALUE
 						}
 					}
+
+				if (previousKeyframe != null && nextKeyframe != null) {
+					value = this._tweenBetweenKeyframes(previousKeyframe, nextKeyframe, time);
 				}
+
 				return value;
 			}
 		}, {
@@ -336,12 +453,12 @@ return /******/ (function(modules) { // webpackBootstrap
 
 				if (keyframe.time < lastKeyframe.time) {
 					// we are looping and needing to use the last keyframe as lastKeyframe
-					timeDifference = this._duration - lastKeyframe.time + keyframe.time;
+					timeDifference = this._options.duration - lastKeyframe.time + keyframe.time;
 
 					if (time < lastKeyframe.time) {
 						// time is less that the last keyframe.time and requires the difference
 						// between the last keyframe.time and the duration to be taken into account
-						deltaFloat = (this._duration - lastKeyframe.time + time) / timeDifference;
+						deltaFloat = (this._options.duration - lastKeyframe.time + time) / timeDifference;
 					} else {
 						deltaFloat = (time - lastKeyframe.time) / timeDifference;
 					}
@@ -365,7 +482,7 @@ return /******/ (function(modules) { // webpackBootstrap
 		}, {
 			key: "duration",
 			get: function get() {
-				return this._duration;
+				return this._options.duration;
 			}
 		}]);
 

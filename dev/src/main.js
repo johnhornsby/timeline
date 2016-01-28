@@ -15,14 +15,18 @@ class Main {
 			x: [{ value: 0, time: 200 }, { value: 50, time: 500 }, { value: 400, time: 1000 }]
 		}
 
-		const t = new Tween(propertyKeyframes, "test2", {});
+		const t = new Tween(propertyKeyframes, "test2", {
+			loop: true,
+			fillMode: 3,
+			in: 250
+		});
 
 		timeline.addTween(t);
 
-		const xValue = timeline.getState(350).get("test2").x;
+		const xValue = timeline.getState(260).get("test2").x;
 		console.log(xValue);
 
-		console.dir(t.getState(350));
+		// console.dir(t.getState(350));
 
 	}
 }
