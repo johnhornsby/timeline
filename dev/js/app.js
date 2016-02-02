@@ -7425,29 +7425,29 @@
 				var propertyKeyframes = {
 					x: [{
 						value: 0,
-						time: 0,
-						animatorType: _distTimeline.MotionTween.animatorType.cubicBezier,
-						animatorOptions: {
-							controlPoints: [.15, .66, .83, .67]
-						}
-					}, {
+						time: 0
+					}, // 	animatorType: MotionTween.animatorType.cubicBezier,
+					// animatorOptions: {
+					// 	controlPoints: [.15, .66, .83, .67]
+					// }
+					{
 						value: 50,
-						time: 500,
-						animatorType: _distTimeline.MotionTween.animatorType.cubicBezier,
-						animatorOptions: {
-							controlPoints: [.15, .66, .83, .67]
-						}
+						time: 500
 					}]
 				};
 
+				// animatorType: MotionTween.animatorType.cubicBezier,
+				// animatorOptions: {
+				// 	controlPoints: [.15, .66, .83, .67]
+				// }
 				var t = new _distTimeline.Tween(propertyKeyframes, "test2", {
 					loop: true,
 					fillMode: 0
 				});
 
-				timeline.addTween(t);
+				timeline.addTween(t, 100);
 
-				var xValue = timeline.getState(250).get("test2").x;
+				var xValue = timeline.getState(350).get("test2").x;
 				console.log(xValue);
 			}
 		}]);
@@ -7586,8 +7586,8 @@
 
 					_createClass(Timeline, [{
 						key: "addTween",
-						value: function addTween(tween) {
-							this._addTween(tween);
+						value: function addTween(tween, time) {
+							this._addTween(tween, time);
 						}
 					}, {
 						key: "getState",
@@ -7602,8 +7602,15 @@
 					}, {
 						key: "_addTween",
 						value: function _addTween(tween) {
-							if (this._tweens.indexOf(tween) === -1) {
-								this._tweens.push(tween);
+							var time = arguments.length <= 1 || arguments[1] === undefined ? 0 : arguments[1];
+
+							if (this._tweens.length === 0 || this._tweens.find(function (tweenObjectData) {
+								return tweenObjectData.tween === tween;
+							}) === false) {
+								this._tweens.push({
+									tween: tween,
+									time: time
+								});
 								this._updateDuration();
 							}
 						}
@@ -7613,35 +7620,20 @@
 							var _this = this;
 
 							this._duration = 0;
-							this._tweens.forEach(function (tween, index) {
-								_this._duration = Math.max(_this._duration, tween.duration);
+							this._tweens.forEach(function (tweenObjectData, index) {
+								_this._duration = Math.max(_this._duration, tweenObjectData.time + tweenObjectData.tween.duration);
 							});
 						}
 					}, {
 						key: "_getState",
 						value: function _getState(time) {
 							var stateMap = new Map();
-							// if (this._loop) {
-							//   // wrap time
-							//   time = ((time % this._duration) + this._duration) % this._duration;
-							// }
-							// // iterate over map properies
-							this._tweens.forEach(function (tween, index) {
-								//   // interate over object properties
-								stateMap.set(tween.identifier, tween.getState(time));
-								//   const propertiesStateObject = {};
-								//   let keyframes;
-
-								//   for (var prop in propertiesObject) {
-								//     if ( propertiesObject.hasOwnProperty( prop )) {
-								//       keyframes = propertiesObject[prop];
-								//       propertiesStateObject[prop] = this._getTweenValue(keyframes, time);
-								//     }
-								//   }
-								//   // set tweenObject back into map against key
-								//   stateMap.set(key, propertiesStateObject);
+							// iterate over map properies
+							this._tweens.forEach(function (tweenObjectData, index) {
+								// interate over object properties
+								stateMap.set(tweenObjectData.tween.identifier, tweenObjectData.tween.getState(time - tweenObjectData.time));
 							});
-							// // return map
+							// return map
 							return stateMap;
 						}
 					}, {
@@ -7941,16 +7933,19 @@
 								}
 							}
 
-							// const easingFunction = MotionTween.easingFunction.easeInQuad;
-							// t: current time, b: begInnIng value, c: change In value, d: duration
-							// const easeDelta = easingFunction(deltaFloat, 0, 1, 1);
+							var easedDelta = deltaFloat;
 
-							lastKeyframe.animatorOptions.time = deltaFloat;
+							if (lastKeyframe.animatorType != null) {
+								var animatorOptions = {};
+								if (lastKeyframe.animatorOptions != null) {
+									animatorOptions = _extends({}, animatorOptions, lastKeyframe.animatorOptions);
+								}
 
-							var easeDelta = _motionTween2["default"].getValue(lastKeyframe.animatorType, lastKeyframe.animatorOptions);
+								easedDelta = _motionTween2["default"].getValue(lastKeyframe.animatorType, animatorOptions, deltaFloat);
+							}
 
 							var valueDifference = keyframe.value - lastKeyframe.value;
-							var tweenedValue = lastKeyframe.value + valueDifference * easeDelta;
+							var tweenedValue = lastKeyframe.value + valueDifference * easedDelta;
 
 							return tweenedValue;
 						}
@@ -8226,18 +8221,18 @@
 						}
 					}], [{
 						key: "getValue",
-						value: function getValue(animatorType, animatorOptions) {
-							return MotionTween._getValue(animatorType, animatorOptions);
+						value: function getValue(animatorType, animatorOptions, time) {
+							return MotionTween._getValue(animatorType, animatorOptions, time);
 						}
 					}, {
 						key: "_getValue",
-						value: function _getValue(animatorType, animatorOptions) {
+						value: function _getValue(animatorType, animatorOptions, time) {
 							switch (animatorType) {
 								case _animatorsCubicBezier2["default"].Type:
-									return _animatorsCubicBezier2["default"].getValue(animatorOptions);
+									return _animatorsCubicBezier2["default"].getValue(animatorOptions, time);
 									break;
 								default:
-									return _animatorsEase2["default"].getValue(animatorOptions);
+									return _animatorsEase2["default"].getValue(animatorOptions, time);
 							}
 						}
 					}]);
@@ -8628,8 +8623,8 @@
 						}
 					}], [{
 						key: "getValue",
-						value: function getValue(options) {
-							return CubicBezier._getPointOnBezierCurve(options.controlPoints, options.time);
+						value: function getValue(options, time) {
+							return CubicBezier._getPointOnBezierCurve(options.controlPoints, time);
 						}
 					}, {
 						key: "_getPointOnBezierCurve",
@@ -8759,8 +8754,8 @@
 						}
 					}], [{
 						key: "getValue",
-						value: function getValue(options) {
-							return options.easingFunction(options.time, 0, 1, 1);
+						value: function getValue(options, time) {
+							return options.easingFunction(time, 0, 1, 1);
 						}
 					}]);
 

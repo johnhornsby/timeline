@@ -17,7 +17,7 @@ export default class Timeline {
   }
   
  
-  addTween(tween) { this._addTween(tween); }
+  addTween(tween, time) { this._addTween(tween, time); }
   
   getState(time) { return this._getState(time); }
   
@@ -35,50 +35,34 @@ export default class Timeline {
     this._options = Object.assign({}, TIMELINE_DEFAULT_OPTIONS, options);
   }
   
-  _addTween(tween) {
-    if (this._tweens.indexOf(tween) === -1) {
-      this._tweens.push(tween);
+
+  _addTween(tween, time = 0) {
+    if (this._tweens.length === 0 || this._tweens.find((tweenObjectData) => tweenObjectData.tween === tween) === false) {
+      this._tweens.push({
+        tween,
+        time
+      });
       this._updateDuration();
     }
   }
 
   
-  
   _updateDuration() {
      this._duration = 0;
-      this._tweens.forEach((tween, index) => {
-        this._duration = Math.max(this._duration, tween.duration);
+      this._tweens.forEach((tweenObjectData, index) => {
+        this._duration = Math.max(this._duration, tweenObjectData.time + tweenObjectData.tween.duration);
       });
   }
   
   
   _getState(time) {
     const stateMap = new Map();
-    // if (this._loop) {
-    //   // wrap time
-    //   time = ((time % this._duration) + this._duration) % this._duration;
-    // }
-    // // iterate over map properies
-    this._tweens.forEach((tween, index) => {
-    //   // interate over object properties
-      stateMap.set(tween.identifier, tween.getState(time));
-    //   const propertiesStateObject = {};
-    //   let keyframes;
-      
-    //   for (var prop in propertiesObject) {
-    //     if ( propertiesObject.hasOwnProperty( prop )) {
-    //       keyframes = propertiesObject[prop];
-    //       propertiesStateObject[prop] = this._getTweenValue(keyframes, time);
-    //     } 
-    //   }
-    //   // set tweenObject back into map against key
-    //   stateMap.set(key, propertiesStateObject);
+    // iterate over map properies
+    this._tweens.forEach((tweenObjectData, index) => {
+      // interate over object properties
+      stateMap.set(tweenObjectData.tween.identifier, tweenObjectData.tween.getState(time - tweenObjectData.time));
     }); 
-    // // return map
+    // return map
     return stateMap;
   }
-
-}
-
-
-                  
+}             

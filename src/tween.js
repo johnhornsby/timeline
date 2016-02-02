@@ -259,22 +259,23 @@ export default class Tween {
 			}
 		}
 
-		// const easingFunction = MotionTween.easingFunction.easeInQuad;
-		// t: current time, b: begInnIng value, c: change In value, d: duration
-		// const easeDelta = easingFunction(deltaFloat, 0, 1, 1);
+		let easedDelta = deltaFloat;
 
-		lastKeyframe.animatorOptions.time = deltaFloat;
+		if (lastKeyframe.animatorType != null) {
+			let animatorOptions = {};
+			if (lastKeyframe.animatorOptions != null) {
+				animatorOptions = {
+					...animatorOptions,
+					...lastKeyframe.animatorOptions
+				}
+			}
 
-		const easeDelta = MotionTween.getValue(lastKeyframe.animatorType, lastKeyframe.animatorOptions);
+			easedDelta = MotionTween.getValue(lastKeyframe.animatorType, animatorOptions, deltaFloat);
+		}
 
 		const valueDifference = (keyframe.value - lastKeyframe.value);
-		const tweenedValue = lastKeyframe.value + (valueDifference * easeDelta);
+		const tweenedValue = lastKeyframe.value + (valueDifference * easedDelta);
 
 		return tweenedValue;
 	}
-
-
-
-
-
 }

@@ -16,18 +16,18 @@ class Main {
 				{
 					value: 0,
 				 	time: 0,
-				 	animatorType: MotionTween.animatorType.cubicBezier,
-					animatorOptions: {
-						controlPoints: [.15, .66, .83, .67]
-					}
+				 // 	animatorType: MotionTween.animatorType.cubicBezier,
+					// animatorOptions: {
+					// 	controlPoints: [.15, .66, .83, .67]
+					// }
 				},
 				{
 					value: 50,
 					time: 500,
-					animatorType: MotionTween.animatorType.cubicBezier,
-					animatorOptions: {
-						controlPoints: [.15, .66, .83, .67]
-					}
+					// animatorType: MotionTween.animatorType.cubicBezier,
+					// animatorOptions: {
+					// 	controlPoints: [.15, .66, .83, .67]
+					// }
 				}]
 		}
 
@@ -36,9 +36,9 @@ class Main {
 			fillMode: 0
 		});
 
-		timeline.addTween(t);
+		timeline.addTween(t, 100);
 
-		const xValue = timeline.getState(250).get("test2").x;
+		const xValue = timeline.getState(350).get("test2").x;
 		console.log(xValue);
 
 	}
