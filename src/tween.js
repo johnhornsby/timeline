@@ -1,3 +1,6 @@
+import MotionTween from 'motion-tween';
+
+
 
 const _DEFAULT_OPTIONS = {
 	loop: false,
@@ -41,6 +44,14 @@ export default class Tween {
 	get identifier() { return this._identifier; }
 
 	get duration() { return this._options.duration; }
+
+	get in() { return this._options.in; }
+
+	get out() { return this._options.out; }
+
+	get loop() { return this._options.loop; }
+
+	get fillMode() { return this._options.fillMode; }
 
 
 
@@ -124,7 +135,7 @@ export default class Tween {
 
 
 		if (this._options.out != null) {
-			this._duration = this._options.out - this._options.in;
+			this._duration = this._options.duration = this._options.out - this._options.in;
 		} else {
 			this._options.out = this._options.in + this._duration;
 		}
@@ -156,7 +167,7 @@ export default class Tween {
 
 
 	_loopTime(time) {
-		return time = (((time - this._options.in) % this._options.duration) + this._options.duration) % this._options.duration;
+		return (((time - this._options.in) % this._duration) + this._duration) % this._duration;
 	}
 
 
@@ -189,7 +200,6 @@ export default class Tween {
 		let keyframe, keyframeValue;
 		let lastKeyframe;
 
-
 		// the aim here is to find the keyframe to either side of the time value
 
 		let previousKeyframe = null;
@@ -200,8 +210,8 @@ export default class Tween {
 			keyframeValue = keyframe.value;
 
 			if (time === keyframe.time) {
-				previousKeyframe = nextKeyframe = keyframe;
-				break; // break here as we have found all we need
+				return keyframe.value;
+
 			} else if (time > keyframe.time){
 				previousKeyframe = keyframe;
 				// no need to break here as we continue iterating through keyFrames to find the keyframe just previous to the time value
@@ -216,11 +226,11 @@ export default class Tween {
 		}
 
 		if (previousKeyframe == null) {
-			previousKeyframe = nextKeyframe;
+			return nextKeyframe.value;
 		}
 
 		if (nextKeyframe == null) {
-			nextKeyframe = previousKeyframe;
+			return previousKeyframe.value;
 		}
 
 
@@ -249,9 +259,22 @@ export default class Tween {
 			}
 		}
 
+		// const easingFunction = MotionTween.easingFunction.easeInQuad;
+		// t: current time, b: begInnIng value, c: change In value, d: duration
+		// const easeDelta = easingFunction(deltaFloat, 0, 1, 1);
+
+		lastKeyframe.animatorOptions.time = deltaFloat;
+
+		const easeDelta = MotionTween.getValue(lastKeyframe.animatorType, lastKeyframe.animatorOptions);
+
 		const valueDifference = (keyframe.value - lastKeyframe.value);
-		const tweenedValue = lastKeyframe.value + (valueDifference * deltaFloat);
+		const tweenedValue = lastKeyframe.value + (valueDifference * easeDelta);
 
 		return tweenedValue;
 	}
+
+
+
+
+
 }
