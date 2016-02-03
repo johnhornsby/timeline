@@ -698,18 +698,18 @@ return /******/ (function(modules) { // webpackBootstrap
 	    }
 	  }], [{
 	    key: "getValue",
-	    value: function getValue(animatorType, animatorOptions, time) {
-	      return MotionTween._getValue(animatorType, animatorOptions, time);
+	    value: function getValue(animatorType, animatorOptions) {
+	      return MotionTween._getValue(animatorType, animatorOptions);
 	    }
 	  }, {
 	    key: "_getValue",
-	    value: function _getValue(animatorType, animatorOptions, time) {
+	    value: function _getValue(animatorType, animatorOptions) {
 	      switch (animatorType) {
 	        case _animatorsCubicBezier2["default"].Type:
-	          return _animatorsCubicBezier2["default"].getValue(animatorOptions, time);
+	          return _animatorsCubicBezier2["default"].getValue(animatorOptions);
 	          break;
 	        default:
-	          return _animatorsEase2["default"].getValue(animatorOptions, time);
+	          return _animatorsEase2["default"].getValue(animatorOptions);
 	      }
 	    }
 	  }]);
@@ -1065,8 +1065,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	    }
 	  }], [{
 	    key: "getValue",
-	    value: function getValue(options, time) {
-	      return CubicBezier._getPointOnBezierCurve(options.controlPoints, time);
+	    value: function getValue(options) {
+	      return CubicBezier._getPointOnBezierCurve(options.controlPoints, options.time);
 	    }
 	  }, {
 	    key: "_getPointOnBezierCurve",
@@ -1165,8 +1165,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	    }
 	  }], [{
 	    key: "getValue",
-	    value: function getValue(options, time) {
-	      return options.easingFunction(time, 0, 1, 1);
+	    value: function getValue(options) {
+	      return options.easingFunction(options.time, 0, 1, 1);
 	    }
 	  }]);
 

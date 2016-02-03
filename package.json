@@ -2,7 +2,7 @@
   "name": "timeline",
   "version": "1.0.0",
   "description": "Agnostic logic for managing a timeline, adding keyframes and tweening between them.",
-  "main": "lib/timeline.js",
+  "main": "dist/timeline.js",
   "scripts": {
     "build:lib": "babel src --out-dir lib",
     "build:umd": "webpack",
@@ -16,7 +16,7 @@
     "webpack": "^1.12.1"
   },
   "dependencies": {
-    "motion-tween": "git+https://github.com/johnhornsby/motion-tween.git",
+    "motion-tween": "git+https://github.com/johnhornsby/motion-tween.git#a68b169",
     "wolfy87-eventemitter": "^4.2.11"
   }
 }
