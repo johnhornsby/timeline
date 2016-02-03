@@ -16,7 +16,7 @@
     "webpack": "^1.12.1"
   },
   "dependencies": {
-    "motion-tween": "git+https://github.com/johnhornsby/motion-tween.git#a68b169",
+    "motion-tween": "git+https://github.com/johnhornsby/motion-tween.git#9c96ca6",
     "wolfy87-eventemitter": "^4.2.11"
   }
 }
