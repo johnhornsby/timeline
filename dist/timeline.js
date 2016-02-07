@@ -282,16 +282,14 @@ return /******/ (function(modules) { // webpackBootstrap
 		}, {
 			key: "_updateDuration",
 			value: function _updateDuration() {
-				var keyframeDuration = 0;
+				var duration = 0;
 				var inIndex = -1;
 
 				this._propertyKeyframesMap.forEach(function (keyframes, key) {
 					keyframes.forEach(function (keyframe, index) {
-						keyframeDuration = Math.max(keyframeDuration, keyframe.time);
+						duration = Math.max(duration, keyframe.time);
 					});
 				});
-
-				this._duration = keyframeDuration;
 
 				if (this._options["in"] == null) {
 					this._options["in"] = 0;
@@ -300,7 +298,7 @@ return /******/ (function(modules) { // webpackBootstrap
 					if (this._options["in"] > this._duration) {
 						throw Error("In point is set beyond the end of the tween!");
 					}
-					this._duration -= this._options["in"];
+					duration -= this._options["in"];
 				}
 
 				if (this._options.out != null && this._options.duration != null) {
@@ -309,14 +307,16 @@ return /******/ (function(modules) { // webpackBootstrap
 
 				if (this._options.duration != null) {
 					this._options.out = this._options["in"] + this._options.duration;
-					this._duration = this._options.duration;
+					duration = this._options.duration;
 				}
 
 				if (this._options.out != null) {
-					this._duration = this._options.duration = this._options.out - this._options["in"];
+					duration = this._options.out - this._options["in"];
 				} else {
-					this._options.out = this._options["in"] + this._duration;
+					this._options.out = this._options["in"] + duration;
 				}
+
+				this._options.duration = duration;
 
 				if (this._options["in"] > this._options.out) {
 					throw Error("tween in is greater than out!");
@@ -344,7 +344,7 @@ return /******/ (function(modules) { // webpackBootstrap
 		}, {
 			key: "_loopTime",
 			value: function _loopTime(time) {
-				return ((time - this._options["in"]) % this._duration + this._duration) % this._duration;
+				return ((time - this._options["in"]) % this._options.duration + this._options.duration) % this._options.duration;
 			}
 		}, {
 			key: "_resolveTime",

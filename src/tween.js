@@ -103,16 +103,14 @@ export default class Tween {
 
 
 	_updateDuration() {
-		let keyframeDuration = 0;
+		let duration = 0;
 		let inIndex = -1;
 
 		this._propertyKeyframesMap.forEach((keyframes, key) => {
 			keyframes.forEach((keyframe, index) => {
-				keyframeDuration = Math.max(keyframeDuration, keyframe.time);
+				duration = Math.max(duration, keyframe.time);
 			});
 		});
-
-		this._duration = keyframeDuration;
 
 		if (this._options.in == null) {
 			this._options.in = 0;
@@ -121,7 +119,7 @@ export default class Tween {
 			if (this._options.in > this._duration) {
 				throw Error("In point is set beyond the end of the tween!");
 			}
-			this._duration -= this._options.in;
+			duration -= this._options.in;
 		}
 
 		if (this._options.out != null && this._options.duration != null) {
@@ -130,15 +128,17 @@ export default class Tween {
 
 		if (this._options.duration != null) {
 			this._options.out = this._options.in + this._options.duration;
-			this._duration = this._options.duration;
+			duration = this._options.duration;
 		}
 
 
 		if (this._options.out != null) {
-			this._duration = this._options.duration = this._options.out - this._options.in;
+			duration = this._options.out - this._options.in;
 		} else {
-			this._options.out = this._options.in + this._duration;
+			this._options.out = this._options.in + duration;
 		}
+
+		this._options.duration = duration;
 
 		if (this._options.in > this._options.out) {
 			throw Error("tween in is greater than out!");
@@ -167,7 +167,7 @@ export default class Tween {
 
 
 	_loopTime(time) {
-		return (((time - this._options.in) % this._duration) + this._duration) % this._duration;
+		return (((time - this._options.in) % this._options.duration) + this._options.duration) % this._options.duration;
 	}
 
 
