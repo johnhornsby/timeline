@@ -7449,6 +7449,31 @@
 
 				var xValue = timeline.getState(350).get("test2").x;
 				console.log(xValue);
+
+				var _iteratorNormalCompletion = true;
+				var _didIteratorError = false;
+				var _iteratorError = undefined;
+
+				try {
+					for (var _iterator = timeline[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+						var state = _step.value;
+
+						console.dir(state);
+					}
+				} catch (err) {
+					_didIteratorError = true;
+					_iteratorError = err;
+				} finally {
+					try {
+						if (!_iteratorNormalCompletion && _iterator["return"]) {
+							_iterator["return"]();
+						}
+					} finally {
+						if (_didIteratorError) {
+							throw _iteratorError;
+						}
+					}
+				}
 			}
 		}]);
 
@@ -7545,6 +7570,8 @@
 			/* 1 */
 			function (module, exports) {
 
+				// import "babel-polyfill";
+
 				"use strict";
 
 				Object.defineProperty(exports, "__esModule", {
@@ -7568,14 +7595,15 @@
 				}
 
 				var TIMELINE_DEFAULT_OPTIONS = {
-					loop: false
+					loop: false,
+					fps: 60
 				};
 
 				var Timeline = (function () {
 					function Timeline(options) {
 						_classCallCheck(this, Timeline);
 
-						//this._currentTime = 0;
+						this._currentTime = 0;
 						this._loop = null;
 						this._options = null;
 						this._duration = null;
@@ -7583,6 +7611,10 @@
 
 						this._init(options);
 					}
+
+					/*________________________________________________________
+	    	PUBLIC CLASS METHODS
+	    ________________________________________________________*/
 
 					_createClass(Timeline, [{
 						key: "addTween",
@@ -7594,6 +7626,21 @@
 						value: function getState(time) {
 							return this._getState(time);
 						}
+					}, {
+						key: Symbol.iterator,
+						value: function value() {
+							return this;
+						}
+					}, {
+						key: "next",
+						value: function next() {
+							return this._next();
+						}
+
+						/*________________________________________________________
+	     	PRIVATE CLASS METHODS
+	     ________________________________________________________*/
+
 					}, {
 						key: "_init",
 						value: function _init(options) {
@@ -7635,6 +7682,24 @@
 							});
 							// return map
 							return stateMap;
+						}
+					}, {
+						key: "_next",
+						value: function _next() {
+							var time = this._currentTime;
+
+							this._currentTime += 1000 / this._options.fps;
+
+							var done = time >= this._duration;
+
+							if (done) {
+								this._currentTime = 0;
+								return { done: done };
+							} else {
+								return {
+									value: this._getState(time)
+								};
+							}
 						}
 					}, {
 						key: "duration",
@@ -7780,16 +7845,14 @@
 					}, {
 						key: "_updateDuration",
 						value: function _updateDuration() {
-							var keyframeDuration = 0;
+							var duration = 0;
 							var inIndex = -1;
 
 							this._propertyKeyframesMap.forEach(function (keyframes, key) {
 								keyframes.forEach(function (keyframe, index) {
-									keyframeDuration = Math.max(keyframeDuration, keyframe.time);
+									duration = Math.max(duration, keyframe.time);
 								});
 							});
-
-							this._duration = keyframeDuration;
 
 							if (this._options["in"] == null) {
 								this._options["in"] = 0;
@@ -7798,7 +7861,7 @@
 								if (this._options["in"] > this._duration) {
 									throw Error("In point is set beyond the end of the tween!");
 								}
-								this._duration -= this._options["in"];
+								duration -= this._options["in"];
 							}
 
 							if (this._options.out != null && this._options.duration != null) {
@@ -7807,14 +7870,16 @@
 
 							if (this._options.duration != null) {
 								this._options.out = this._options["in"] + this._options.duration;
-								this._duration = this._options.duration;
+								duration = this._options.duration;
 							}
 
 							if (this._options.out != null) {
-								this._duration = this._options.duration = this._options.out - this._options["in"];
+								duration = this._options.out - this._options["in"];
 							} else {
-								this._options.out = this._options["in"] + this._duration;
+								this._options.out = this._options["in"] + duration;
 							}
+
+							this._options.duration = duration;
 
 							if (this._options["in"] > this._options.out) {
 								throw Error("tween in is greater than out!");
@@ -7842,7 +7907,7 @@
 					}, {
 						key: "_loopTime",
 						value: function _loopTime(time) {
-							return ((time - this._options["in"]) % this._duration + this._duration) % this._duration;
+							return ((time - this._options["in"]) % this._options.duration + this._options.duration) % this._options.duration;
 						}
 					}, {
 						key: "_resolveTime",
@@ -8221,18 +8286,18 @@
 						}
 					}], [{
 						key: "getValue",
-						value: function getValue(animatorType, animatorOptions) {
-							return MotionTween._getValue(animatorType, animatorOptions);
+						value: function getValue(animatorType, animatorOptions, time) {
+							return MotionTween._getValue(animatorType, animatorOptions, time);
 						}
 					}, {
 						key: "_getValue",
-						value: function _getValue(animatorType, animatorOptions) {
+						value: function _getValue(animatorType, animatorOptions, time) {
 							switch (animatorType) {
 								case _animatorsCubicBezier2["default"].Type:
-									return _animatorsCubicBezier2["default"].getValue(animatorOptions);
+									return _animatorsCubicBezier2["default"].getValue(animatorOptions, time);
 									break;
 								default:
-									return _animatorsEase2["default"].getValue(animatorOptions);
+									return _animatorsEase2["default"].getValue(animatorOptions, time);
 							}
 						}
 					}]);
@@ -8623,8 +8688,8 @@
 						}
 					}], [{
 						key: "getValue",
-						value: function getValue(options) {
-							return CubicBezier._getPointOnBezierCurve(options.controlPoints, options.time);
+						value: function getValue(options, time) {
+							return CubicBezier._getPointOnBezierCurve(options.controlPoints, time);
 						}
 					}, {
 						key: "_getPointOnBezierCurve",
@@ -8754,8 +8819,8 @@
 						}
 					}], [{
 						key: "getValue",
-						value: function getValue(options) {
-							return options.easingFunction(options.time, 0, 1, 1);
+						value: function getValue(options, time) {
+							return options.easingFunction(time, 0, 1, 1);
 						}
 					}]);
 

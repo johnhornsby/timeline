@@ -1,3 +1,4 @@
+
 import {Timeline, Tween, MotionTween} from "../../dist/timeline";
 
 class Main {
@@ -40,6 +41,11 @@ class Main {
 
 		const xValue = timeline.getState(350).get("test2").x;
 		console.log(xValue);
+
+		for (let state of timeline) {
+			console.dir(state);
+		}
+
 
 	}
 }
