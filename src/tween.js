@@ -37,6 +37,15 @@ export default class Tween {
 	}
 
 
+
+
+
+
+	/*________________________________________________________
+
+	PUBLIC CLASS METHODS
+	________________________________________________________*/
+
 	getState(time) { return this._getState(time); }
 
 	get propertyKeyframesMap() { return this._propertyKeyframesMap; }
@@ -52,7 +61,6 @@ export default class Tween {
 	get loop() { return this._options.loop; }
 
 	get fillMode() { return this._options.fillMode; }
-
 
 
 
@@ -235,6 +243,11 @@ export default class Tween {
 
 
 		if (previousKeyframe != null && nextKeyframe != null) {
+			// check for a hold keyframe
+			if (previousKeyframe.hold != null && previousKeyframe.hold === true) {
+				return previousKeyframe.value;
+			}
+
 			value = this._tweenBetweenKeyframes(previousKeyframe, nextKeyframe, time);
 		}
 

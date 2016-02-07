@@ -66,15 +66,20 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	var _timeline2 = _interopRequireDefault(_timeline);
 
-	var _tween = __webpack_require__(2);
+	var _interactiveTimeline = __webpack_require__(2);
+
+	var _interactiveTimeline2 = _interopRequireDefault(_interactiveTimeline);
+
+	var _tween = __webpack_require__(3);
 
 	var _tween2 = _interopRequireDefault(_tween);
 
-	var _motionTween = __webpack_require__(3);
+	var _motionTween = __webpack_require__(4);
 
 	var _motionTween2 = _interopRequireDefault(_motionTween);
 
 	exports.Timeline = _timeline2['default'];
+	exports.InteractiveTimeline = _interactiveTimeline2['default'];
 	exports.Tween = _tween2['default'];
 	exports.MotionTween = _motionTween2['default'];
 
@@ -237,6 +242,155 @@ return /******/ (function(modules) { // webpackBootstrap
 /* 2 */
 /***/ function(module, exports, __webpack_require__) {
 
+	'use strict';
+
+	Object.defineProperty(exports, '__esModule', {
+		value: true
+	});
+
+	var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
+
+	var _get = function get(_x, _x2, _x3) { var _again = true; _function: while (_again) { var object = _x, property = _x2, receiver = _x3; _again = false; if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { _x = parent; _x2 = property; _x3 = receiver; _again = true; desc = parent = undefined; continue _function; } } else if ('value' in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } } };
+
+	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
+
+	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
+
+	function _inherits(subClass, superClass) { if (typeof superClass !== 'function' && superClass !== null) { throw new TypeError('Super expression must either be null or a function, not ' + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
+
+	var _timeline = __webpack_require__(1);
+
+	var _timeline2 = _interopRequireDefault(_timeline);
+
+	var InteractiveTimeline = (function (_Timeline) {
+		_inherits(InteractiveTimeline, _Timeline);
+
+		function InteractiveTimeline(options) {
+			_classCallCheck(this, InteractiveTimeline);
+
+			_get(Object.getPrototypeOf(InteractiveTimeline.prototype), 'constructor', this).call(this, options);
+			this._sequences = [];
+		}
+
+		/*________________________________________________________
+	 	PUBLIC CLASS METHODS
+	 ________________________________________________________*/
+
+		_createClass(InteractiveTimeline, [{
+			key: 'increment',
+			value: function increment(timeDelta) {
+				return this._increment(timeDelta);
+			}
+		}, {
+			key: 'setSequences',
+			value: function setSequences(sequences) {
+				this._setSequences(sequences);
+			}
+
+			/*________________________________________________________
+	  	PRIVATE CLASS METHODS
+	  ________________________________________________________*/
+
+		}, {
+			key: '_increment',
+			value: function _increment(timeDelta) {
+				var outDelta = undefined,
+				    sequenceOutTime = undefined;
+
+				// get current sequence
+				var currentSequence = this._getSequenceByTime(this._currentTime);
+
+				this._currentTime += timeDelta;
+
+				// get updated sequence with current time
+				var prospectiveSequence = this._getSequenceByTime(this._currentTime);
+
+				// we only redirect if last time was within a sequence
+				if (currentSequence != null) {
+					// check to see we have left the current sequence and that the current sequence has a next location
+					if (currentSequence !== prospectiveSequence && currentSequence.next != null) {
+
+						// if there is a prospective then check that its not the next of current
+						if (prospectiveSequence != null) {
+
+							if (currentSequence.next !== prospectiveSequence.label) {
+								// if duration is set on current the outDelta should be from after the duration
+								if (currentSequence.duration) {
+									sequenceOutTime = currentSequence.time + currentSequence.duration;
+								} else {
+									// otherwise no duration set the current sequence extends to the begining of the prospective
+									sequenceOutTime = prospectiveSequence.time;
+								}
+							} else {
+								sequenceOutTime = prospectiveSequence.time;
+							}
+						} else {
+							// if prospective is null and current is not, then a duration must be set, so use that
+							sequenceOutTime = currentSequence.time + currentSequence.duration;
+						}
+
+						outDelta = this._currentTime - sequenceOutTime;
+						// adjust time and update current
+						prospectiveSequence = this._getSequenceByLabel(currentSequence.next);
+
+						this.currentTime = prospectiveSequence.time + outDelta;
+					}
+				}
+
+				return this._getState(this._currentTime);
+			}
+		}, {
+			key: '_setSequences',
+			value: function _setSequences(sequences) {
+				// merge sequence
+				// validate check for overlaping
+				this._sequences = sequences;
+			}
+		}, {
+			key: '_getSequenceByTime',
+			value: function _getSequenceByTime(time) {
+				var sequence = undefined;
+
+				for (var i = 0; i < this._sequences.length; i++) {
+					if (this._sequences[i].time > time) {
+						break;
+					}
+					sequence = this._sequences[i];
+				}
+
+				if (sequence) {
+					// check if time is beyond last sequence
+					if (sequence.duration && time > sequence.time + sequence.duration) {
+						return null;
+					}
+					// return the current sequence
+					return sequence;
+				}
+
+				// no relevent sequences
+				return null;
+			}
+		}, {
+			key: '_getSequenceByLabel',
+			value: function _getSequenceByLabel(label) {
+				for (var i = 0; i < this._sequences.length; i++) {
+					if (this._sequences[i].label === label) {
+						return this._sequences[i];
+					}
+				}
+			}
+		}]);
+
+		return InteractiveTimeline;
+	})(_timeline2['default']);
+
+	exports['default'] = InteractiveTimeline;
+	module.exports = exports['default'];
+
+/***/ },
+/* 3 */
+/***/ function(module, exports, __webpack_require__) {
+
 	"use strict";
 
 	Object.defineProperty(exports, "__esModule", {
@@ -251,7 +405,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-	var _motionTween = __webpack_require__(3);
+	var _motionTween = __webpack_require__(4);
 
 	var _motionTween2 = _interopRequireDefault(_motionTween);
 
@@ -284,6 +438,10 @@ return /******/ (function(modules) { // webpackBootstrap
 
 			this._init(propertyKeyframes, identifier, options);
 		}
+
+		/*________________________________________________________
+	 	PUBLIC CLASS METHODS
+	 ________________________________________________________*/
 
 		_createClass(Tween, [{
 			key: "getState",
@@ -462,6 +620,11 @@ return /******/ (function(modules) { // webpackBootstrap
 				}
 
 				if (previousKeyframe != null && nextKeyframe != null) {
+					// check for a hold keyframe
+					if (previousKeyframe.hold != null && previousKeyframe.hold === true) {
+						return previousKeyframe.value;
+					}
+
 					value = this._tweenBetweenKeyframes(previousKeyframe, nextKeyframe, time);
 				}
 
@@ -546,7 +709,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	module.exports = exports["default"];
 
 /***/ },
-/* 3 */
+/* 4 */
 /***/ function(module, exports, __webpack_require__) {
 
 	"use strict";
@@ -563,31 +726,31 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-	var _Utils = __webpack_require__(4);
+	var _Utils = __webpack_require__(5);
 
 	var _Utils2 = _interopRequireDefault(_Utils);
 
-	var _Easing = __webpack_require__(5);
+	var _Easing = __webpack_require__(6);
 
 	var Easing = _interopRequireWildcard(_Easing);
 
-	var _animatorsCubicBezier = __webpack_require__(6);
+	var _animatorsCubicBezier = __webpack_require__(7);
 
 	var _animatorsCubicBezier2 = _interopRequireDefault(_animatorsCubicBezier);
 
-	var _animatorsEase = __webpack_require__(7);
+	var _animatorsEase = __webpack_require__(8);
 
 	var _animatorsEase2 = _interopRequireDefault(_animatorsEase);
 
-	var _animatorsFriction = __webpack_require__(8);
+	var _animatorsFriction = __webpack_require__(9);
 
 	var _animatorsFriction2 = _interopRequireDefault(_animatorsFriction);
 
-	var _animatorsSpring = __webpack_require__(9);
+	var _animatorsSpring = __webpack_require__(10);
 
 	var _animatorsSpring2 = _interopRequireDefault(_animatorsSpring);
 
-	var _animatorsSpringRK4 = __webpack_require__(10);
+	var _animatorsSpringRK4 = __webpack_require__(11);
 
 	var _animatorsSpringRK42 = _interopRequireDefault(_animatorsSpringRK4);
 
@@ -772,7 +935,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	module.exports = exports["default"];
 
 /***/ },
-/* 4 */
+/* 5 */
 /***/ function(module, exports) {
 
 	'use strict';
@@ -859,7 +1022,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	module.exports = exports['default'];
 
 /***/ },
-/* 5 */
+/* 6 */
 /***/ function(module, exports) {
 
 	// t: current time, b: begInnIng value, c: change In value, d: duration
@@ -1062,7 +1225,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	}
 
 /***/ },
-/* 6 */
+/* 7 */
 /***/ function(module, exports) {
 
 	"use strict";
@@ -1156,7 +1319,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	module.exports = exports["default"];
 
 /***/ },
-/* 7 */
+/* 8 */
 /***/ function(module, exports, __webpack_require__) {
 
 	"use strict";
@@ -1173,7 +1336,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-	var _Easing = __webpack_require__(5);
+	var _Easing = __webpack_require__(6);
 
 	var Easing = _interopRequireWildcard(_Easing);
 
@@ -1228,7 +1391,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	module.exports = exports["default"];
 
 /***/ },
-/* 8 */
+/* 9 */
 /***/ function(module, exports) {
 
 	"use strict";
@@ -1302,7 +1465,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	module.exports = exports["default"];
 
 /***/ },
-/* 9 */
+/* 10 */
 /***/ function(module, exports) {
 
 	"use strict";
@@ -1372,7 +1535,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	module.exports = exports["default"];
 
 /***/ },
-/* 10 */
+/* 11 */
 /***/ function(module, exports) {
 
 	// r4k from http://mtdevans.com/2013/05/fourth-order-runge-kutta-algorithm-in-javascript-with-demo/
