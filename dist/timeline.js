@@ -286,6 +286,11 @@ return /******/ (function(modules) { // webpackBootstrap
 			value: function setSequences(sequences) {
 				this._setSequences(sequences);
 			}
+		}, {
+			key: 'getSequences',
+			value: function getSequences() {
+				return this._sequences;
+			}
 
 			/*________________________________________________________
 	  	PRIVATE CLASS METHODS

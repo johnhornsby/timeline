@@ -31,8 +31,6 @@ export default class Tween {
 
 	constructor(propertyKeyframes, identifier, options) {
 
-
-
 		this._init(propertyKeyframes, identifier, options);
 	}
 

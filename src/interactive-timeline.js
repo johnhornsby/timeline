@@ -23,6 +23,8 @@ export default class InteractiveTimeline extends Timeline {
 
 	setSequences(sequences) { this._setSequences(sequences); }
 
+	getSequences() { return this._sequences; }
+
 
 
 
