@@ -617,10 +617,18 @@ return /******/ (function(modules) { // webpackBootstrap
 				}
 
 				if (previousKeyframe == null) {
+					if (time < this._options["in"] && this._options.fillMode !== Tween.FILL_MODE.BACKWARD && this._options.fillMode !== Tween.FILL_MODE.BOTH) {
+						return value;
+					}
+
 					return nextKeyframe.value;
 				}
 
 				if (nextKeyframe == null) {
+					if (time > this._options.out && this._options.fillMode !== Tween.FILL_MODE.FORWARD && this._options.fillMode !== Tween.FILL_MODE.BOTH) {
+						return value;
+					}
+
 					return previousKeyframe.value;
 				}
 
