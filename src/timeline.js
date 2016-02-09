@@ -73,7 +73,7 @@ export default class Timeline {
 	
 
 	_addTween(tween, time = 0) {
-		if (this._tweens.length === 0 || this._tweens.find((tweenObjectData) => tweenObjectData.tween === tween) === false) {
+		if (this._tweens.find((tweenObjectData) => tweenObjectData.tween === tween) === undefined) {
 			this._tweens.push({
 				tween,
 				time
