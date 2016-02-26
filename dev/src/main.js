@@ -41,11 +41,12 @@ class Main {
 				}]
 		}
 
-		const t = new Tween(propertyKeyframes, "test2", {
+		const t = new Tween(propertyKeyframes, "simpleTest", {
 			loop: true,
 			fillMode: 0
 		});
 
+		timeline.addTween(t, 0);
 		timeline.addTween(t, 0);
 
 
@@ -67,14 +68,14 @@ class Main {
 		timeline.setSequences(sequences);
 
 
-		window.timeline = timeline;
+		// window.timeline = timeline;
 
-		// const xValue = timeline.getState(450).get("test2").x;
-		// console.log(xValue);
+		const xValue = timeline.getState(450).get("simpleTest").x;
+		console.log(xValue);
 
-		// for (let state of timeline) {
-		// 	console.dir(state);
-		// }
+		for (let state of timeline) {
+			console.dir(state);
+		}
 
 
 	}

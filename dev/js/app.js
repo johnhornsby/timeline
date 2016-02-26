@@ -97,11 +97,12 @@
 				// animatorOptions: {
 				// 	controlPoints: [.15, .66, .83, .67]
 				// }
-				var t = new _distTimeline.Tween(propertyKeyframes, "test2", {
+				var t = new _distTimeline.Tween(propertyKeyframes, "simpleTest", {
 					loop: true,
 					fillMode: 0
 				});
 
+				timeline.addTween(t, 0);
 				timeline.addTween(t, 0);
 
 				var sequences = [{
@@ -118,14 +119,35 @@
 
 				timeline.setSequences(sequences);
 
-				window.timeline = timeline;
+				// window.timeline = timeline;
 
-				// const xValue = timeline.getState(450).get("test2").x;
-				// console.log(xValue);
+				var xValue = timeline.getState(450).get("simpleTest").x;
+				console.log(xValue);
 
-				// for (let state of timeline) {
-				// 	console.dir(state);
-				// }
+				var _iteratorNormalCompletion = true;
+				var _didIteratorError = false;
+				var _iteratorError = undefined;
+
+				try {
+					for (var _iterator = timeline[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+						var state = _step.value;
+
+						console.dir(state);
+					}
+				} catch (err) {
+					_didIteratorError = true;
+					_iteratorError = err;
+				} finally {
+					try {
+						if (!_iteratorNormalCompletion && _iterator["return"]) {
+							_iterator["return"]();
+						}
+					} finally {
+						if (_didIteratorError) {
+							throw _iteratorError;
+						}
+					}
+				}
 			}
 		}]);
 
@@ -273,6 +295,7 @@
 						this._options = null;
 						this._duration = null;
 						this._tweens = [];
+						this._unnamedInstances = 0;
 
 						this._init(options);
 					}
@@ -293,8 +316,8 @@
 						}
 					}, {
 						key: "addTween",
-						value: function addTween(tween, time) {
-							this._addTween(tween, time);
+						value: function addTween(tween, time, instanceName) {
+							this._addTween(tween, time, instanceName);
 						}
 					}, {
 						key: "getState",
@@ -315,16 +338,46 @@
 						key: "_addTween",
 						value: function _addTween(tween) {
 							var time = arguments.length <= 1 || arguments[1] === undefined ? 0 : arguments[1];
+							var instanceName = arguments.length <= 2 || arguments[2] === undefined ? null : arguments[2];
 
-							if (this._tweens.length === 0 || this._tweens.find(function (tweenObjectData) {
-								return tweenObjectData.tween === tween;
-							}) === false) {
-								this._tweens.push({
-									tween: tween,
-									time: time
-								});
-								this._updateDuration();
+							var o = {
+								tween: tween,
+								time: time,
+								instanceName: instanceName
+							};
+
+							if (instanceName == null && (tween.identifier == null || tween.identifier === "")) {
+								throw Error("Tween can't be added without an valid String identifier!");
 							}
+
+							var instanceCount = 1;
+							for (var i = 0; i < this._tweens.length; i++) {
+								if (this._tweens[i].tween === tween) {
+									instanceCount += 1;
+								}
+							}
+
+							var insertIndex = this._tweens.length;
+							var instanceCountString = "";
+
+							if (instanceName != null) {
+								// check if we already an instance of that name
+								for (var i = 0; i < this._tweens.length; i++) {
+									// if so then replace
+									if (this._tweens[i].instanceName === instanceName) {
+										insertIndex = i;
+										break;
+									}
+								}
+							} else {
+								if (instanceCount > 1) {
+									instanceCountString = String(instanceCount);
+								}
+								o.instanceName = "" + tween.identifier + instanceCountString;
+							}
+
+							this._tweens[insertIndex] = o;
+							this._updateDuration();
 						}
 					}, {
 						key: "_updateDuration",
@@ -343,7 +396,7 @@
 							// iterate over map properies
 							this._tweens.forEach(function (tweenObjectData, index) {
 								// interate over object properties
-								stateMap.set(tweenObjectData.tween.identifier, tweenObjectData.tween.getState(time - tweenObjectData.time));
+								stateMap.set(tweenObjectData.instanceName, tweenObjectData.tween.getState(time - tweenObjectData.time));
 							});
 							// return map
 							return stateMap;
@@ -397,6 +450,10 @@
 
 				exports["default"] = Timeline;
 				module.exports = exports["default"];
+
+				// An Array of Objects {tween, time}
+
+				// tally of un named instance, allow easy generation of new instance names
 
 				/***/
 			},
@@ -483,6 +540,11 @@
 						value: function setSequences(sequences) {
 							this._setSequences(sequences);
 						}
+					}, {
+						key: 'getSequences',
+						value: function getSequences() {
+							return this._sequences;
+						}
 
 						/*________________________________________________________
 	     	PRIVATE CLASS METHODS
@@ -527,7 +589,7 @@
 									}
 
 									outDelta = this._currentTime - sequenceOutTime;
-									// // adjust time and update current
+									// adjust time and update current
 									prospectiveSequence = this._getSequenceByLabel(currentSequence.next);
 
 									this.currentTime = prospectiveSequence.time + outDelta;
@@ -832,10 +894,18 @@
 							}
 
 							if (previousKeyframe == null) {
+								if (time < this._options["in"] && this._options.fillMode !== Tween.FILL_MODE.BACKWARD && this._options.fillMode !== Tween.FILL_MODE.BOTH) {
+									return value;
+								}
+
 								return nextKeyframe.value;
 							}
 
 							if (nextKeyframe == null) {
+								if (time > this._options.out && this._options.fillMode !== Tween.FILL_MODE.FORWARD && this._options.fillMode !== Tween.FILL_MODE.BOTH) {
+									return value;
+								}
+
 								return previousKeyframe.value;
 							}
 

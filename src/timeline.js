@@ -16,7 +16,11 @@ export default class Timeline {
 
 	_duration = null;
 
+	// An Array of Objects {tween, time}
 	_tweens = [];
+
+	// tally of un named instance, allow easy generation of new instance names
+	_unnamedInstances = 0;
 
 	constructor(options) {
 
@@ -37,7 +41,7 @@ export default class Timeline {
 
 	next() { return this._next(); }
 
-	addTween(tween, time) { this._addTween(tween, time); }
+	addTween(tween, time, instanceName) { this._addTween(tween, time, instanceName); }
 	
 	getState(time) { return this._getState(time); }
 
@@ -72,14 +76,47 @@ export default class Timeline {
 	}
 	
 
-	_addTween(tween, time = 0) {
-		if (this._tweens.find((tweenObjectData) => tweenObjectData.tween === tween) === undefined) {
-			this._tweens.push({
-				tween,
-				time
-			});
-			this._updateDuration();
+	_addTween(tween, time = 0, instanceName = null) {
+		const o = {
+			tween,
+			time,
+			instanceName
 		}
+
+		if (instanceName == null && (tween.identifier == null || tween.identifier === "")) {
+			throw Error("Tween can't be added without an valid String identifier!");
+		}
+
+		let instanceCount = 1;
+		for (let i = 0; i < this._tweens.length; i++) {
+			if (this._tweens[i].tween === tween) {
+				instanceCount += 1;
+			}
+		}
+
+		let insertIndex = this._tweens.length;
+		let instanceCountString = "";
+
+		if (instanceName != null) {
+			// check if we already an instance of that name
+			for (let i = 0; i < this._tweens.length; i++) {
+				// if so then replace
+				if (this._tweens[i].instanceName === instanceName) {
+					insertIndex = i;
+					break;
+				}
+			}
+		} else {
+			if (instanceCount > 1) {
+				instanceCountString = String(instanceCount);
+			}
+			o.instanceName = `${tween.identifier}${instanceCountString}`;
+
+		}
+
+		this._tweens[insertIndex] = o;
+		this._updateDuration();
+
 	}
 
 	
@@ -96,7 +133,7 @@ export default class Timeline {
 		// iterate over map properies
 		this._tweens.forEach((tweenObjectData, index) => {
 			// interate over object properties
-			stateMap.set(tweenObjectData.tween.identifier, tweenObjectData.tween.getState(time - tweenObjectData.time));
+			stateMap.set(tweenObjectData.instanceName, tweenObjectData.tween.getState(time - tweenObjectData.time));
 		}); 
 		// return map
 		return stateMap;
