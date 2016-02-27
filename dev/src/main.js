@@ -55,7 +55,7 @@ class Main {
 				time: 0,
 				duration: 250,
 				label: "intro",
-				next: null
+				next: "intro"
 			},
 			{
 				time: 250,
@@ -76,6 +76,10 @@ class Main {
 		for (let state of timeline) {
 			console.dir(state);
 		}
+
+
+
+
 
 
 	}
