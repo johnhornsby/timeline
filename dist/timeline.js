@@ -66,15 +66,15 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	var _timeline2 = _interopRequireDefault(_timeline);
 
-	var _interactiveTimeline = __webpack_require__(4);
+	var _interactiveTimeline = __webpack_require__(13);
 
 	var _interactiveTimeline2 = _interopRequireDefault(_interactiveTimeline);
 
-	var _tween = __webpack_require__(5);
+	var _tween = __webpack_require__(3);
 
 	var _tween2 = _interopRequireDefault(_tween);
 
-	var _motionTween = __webpack_require__(6);
+	var _motionTween = __webpack_require__(4);
 
 	var _motionTween2 = _interopRequireDefault(_motionTween);
 
@@ -97,7 +97,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
 
-	var _get = function get(_x2, _x3, _x4) { var _again = true; _function: while (_again) { var object = _x2, property = _x3, receiver = _x4; _again = false; if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { _x2 = parent; _x3 = property; _x4 = receiver; _again = true; desc = parent = undefined; continue _function; } } else if ('value' in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } } };
+	var _get = function get(_x, _x2, _x3) { var _again = true; _function: while (_again) { var object = _x, property = _x2, receiver = _x3; _again = false; if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { _x = parent; _x2 = property; _x3 = receiver; _again = true; desc = parent = undefined; continue _function; } } else if ('value' in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } } };
 
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
@@ -109,21 +109,42 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	var _timelineState2 = _interopRequireDefault(_timelineState);
 
-	var _timelineAbstract = __webpack_require__(3);
+	var _tween = __webpack_require__(3);
 
-	var _timelineAbstract2 = _interopRequireDefault(_timelineAbstract);
+	var _tween2 = _interopRequireDefault(_tween);
 
 	var _TIMELINE_DEFAULT_OPTIONS = {
 		fps: 60
 	};
 
-	var Timeline = (function (_TimelineAbstract) {
-		_inherits(Timeline, _TimelineAbstract);
+	var _CHILD_DEFAULT_OPTIONS = {
+		fillMode: "both",
+		'in': 0,
+		loop: false,
+		out: null,
+		time: 0
+	};
+
+	var Timeline = (function (_Tween) {
+		_inherits(Timeline, _Tween);
+
+		_createClass(Timeline, null, [{
+			key: 'FILL_MODE',
+			value: {
+				NOME: "none",
+				FORWARD: "forward",
+				BACKWARD: "backward",
+				BOTH: "both"
+			},
+
+			// An Array of Objects {tween, time}
+			enumerable: true
+		}]);
 
 		function Timeline(name, options) {
 			_classCallCheck(this, Timeline);
 
-			_get(Object.getPrototypeOf(Timeline.prototype), 'constructor', this).call(this, name, options);
+			_get(Object.getPrototypeOf(Timeline.prototype), 'constructor', this).call(this, name);
 			this._children = [];
 			this._currentTime = 0;
 		}
@@ -144,8 +165,8 @@ return /******/ (function(modules) { // webpackBootstrap
 			}
 		}, {
 			key: 'addChild',
-			value: function addChild(child, time) {
-				this._addChild(child, time);
+			value: function addChild(child, options) {
+				this._addChild(child, options);
 			}
 		}, {
 			key: '_init',
@@ -155,33 +176,43 @@ return /******/ (function(modules) { // webpackBootstrap
 	  ________________________________________________________*/
 
 			value: function _init(name, options) {
-				_get(Object.getPrototypeOf(Timeline.prototype), '_init', this).call(this, name, options);
+				_get(Object.getPrototypeOf(Timeline.prototype), '_init', this).call(this, name);
 
-				this._options = _extends({}, _TIMELINE_DEFAULT_OPTIONS, this._options);
+				this._options = _extends({}, _TIMELINE_DEFAULT_OPTIONS, options);
 			}
 		}, {
 			key: '_addChild',
-			value: function _addChild(child) {
-				var time = arguments.length <= 1 || arguments[1] === undefined ? 0 : arguments[1];
-
+			value: function _addChild(child, options) {
+				// clone options into settings property
 				var o = {
 					child: child,
-					time: time
+					settings: _extends({}, options)
 				};
+
+				// set out property if not already set
+				if (options.out == null) {
+					o.settings.out = child.duration;
+				}
 
 				this._children.push(o);
 
-				var absoluteDuration = this._getAbsoluteDuration();
+				var absoluteDuration = this._getChildrenDuration();
 
-				this._updateRelativeDuration(absoluteDuration);
+				this._duration = absoluteDuration;
+
+				// this._updateRelativeDuration(absoluteDuration);
 			}
 		}, {
-			key: '_getAbsoluteDuration',
-			value: function _getAbsoluteDuration() {
+			key: '_removeChild',
+			value: function _removeChild() {}
+		}, {
+			key: '_getChildrenDuration',
+			value: function _getChildrenDuration() {
 				var duration = 0;
 
 				this._children.forEach(function (childObjectData, index) {
-					duration = Math.max(duration, childObjectData.time + childObjectData.child.duration);
+
+					duration = Math.max(duration, childObjectData.settings.time + (childObjectData.settings.out - childObjectData.settings['in']));
 				});
 
 				return duration;
@@ -189,20 +220,102 @@ return /******/ (function(modules) { // webpackBootstrap
 		}, {
 			key: '_getState',
 			value: function _getState(time) {
+				var _this = this;
+
 				var state = new _timelineState2['default'](_timelineState2['default'].TYPE.TIMELINE, this._name);
 				var tweenState = undefined;
 
+				var resolvedTime = undefined;
+
 				this._children.forEach(function (childObjectData, index) {
-					tweenState = childObjectData.child.getState(time - childObjectData.time);
+
+					// @TODO resolve our time according to our tween settings
+					resolvedTime = _this._resolveChildRelativeTime(time, childObjectData.settings);
+
+					tweenState = childObjectData.child.getState(resolvedTime);
+
 					state.addChild(tweenState);
 				});
 
 				return state;
 			}
+
+			/**
+	   * Method takes any time and wraps it accordingly to be within in and out points
+	   *
+	   * @private
+	   * @param {Number} time Time in milisecond
+	   * @return Number
+	   */
+		}, {
+			key: '_loopTime',
+			value: function _loopTime(childTime, childSettings) {
+				var duration = childSettings.out - childSettings['in'];
+				var time = childTime - childSettings['in'];
+				var loopedTime = (time % duration + duration) % duration;
+				return childSettings['in'] + loopedTime;
+			}
+
+			/**
+	   * Method takes any time and checks whether the time value requires wrapping, if so then returns wrapped time
+	   *
+	   * @private
+	   * @param {Number} time Time in milisecond
+	   * @return Number
+	   */
+		}, {
+			key: '_resolveChildRelativeTime',
+			value: function _resolveChildRelativeTime(time, childSettings) {
+
+				// time position within the timeline
+				var childAbsoluteX = childSettings.time - childSettings['in'];
+				// now we have the beginning position of the child we can determine the time relative to the child
+				var childRelativeTime = time - childAbsoluteX;
+
+				if (childRelativeTime < childSettings['in']) {
+					if (childSettings.fillMode === Timeline.FILL_MODE.BACKWARD || childSettings.fillMode === Timeline.FILL_MODE.BOTH) {
+						if (childSettings.loop) {
+							return this._loopTime(childRelativeTime, childSettings);
+						}
+					}
+				}
+
+				if (childRelativeTime > childSettings.out) {
+					if (childSettings.fillMode === Timeline.FILL_MODE.FORWARD || childSettings.fillMode === Timeline.FILL_MODE.BOTH) {
+						if (childSettings.loop) {
+							return this._loopTime(childRelativeTime, childSettings);
+						}
+					}
+				}
+
+				// time = 200
+				// settings.in = 100
+				// settings.time = 150
+
+				// settings.time - settings.in = -50
+				// childRelativeTime = time - -50 = 250
+
+				// if (time < this._options.in) {
+				// 	if (this._options.fillMode === TimelineAbstract.FILL_MODE.BACKWARD || this._options.fillMode === TimelineAbstract.FILL_MODE.BOTH) {
+				// 		if (this._options.loop) {
+				// 			return this._loopTime(time);
+				// 		}
+				// 	}
+				// }
+
+				// if (time > this._options.out) {
+				// 	if (this._options.fillMode === TimelineAbstract.FILL_MODE.FORWARD || this._options.fillMode === TimelineAbstract.FILL_MODE.BOTH) {
+				// 		if (this._options.loop) {
+				// 			return this._loopTime(time);
+				// 		}
+				// 	}
+				// }
+
+				return childRelativeTime;
+			}
 		}, {
 			key: '_next',
 			value: function _next() {
-
 				var time = this._currentTime;
 
 				this._currentTime += 1000 / this._options.fps;
@@ -226,15 +339,18 @@ return /******/ (function(modules) { // webpackBootstrap
 			get: function get() {
 				return this._currentTime;
 			}
+		}, {
+			key: 'duration',
+			get: function get() {
+				return this._duration;
+			}
 		}]);
 
 		return Timeline;
-	})(_timelineAbstract2['default']);
+	})(_tween2['default']);
 
 	exports['default'] = Timeline;
 	module.exports = exports['default'];
-
-	// An Array of Objects {tween, time}
 
 /***/ },
 /* 2 */
@@ -254,8 +370,8 @@ return /******/ (function(modules) { // webpackBootstrap
 		_createClass(TimelineState, null, [{
 			key: "TYPE",
 			value: {
-				TWEEN: 0,
-				TIMELINE: 1
+				TWEEN: "tween",
+				TIMELINE: "timeline"
 			},
 			enumerable: true
 		}]);
@@ -264,12 +380,18 @@ return /******/ (function(modules) { // webpackBootstrap
 			_classCallCheck(this, TimelineState);
 
 			this._type = TimelineState.TYPE.TWEEN;
-			this._children = [];
-			this._properties = {};
+			this._children = null;
+			this._properties = null;
 			this._name = null;
 
 			this._type = type;
 			this._name = name;
+
+			this._properties = {};
+
+			if (this._type == TimelineState.TYPE.TIMELINE) {
+				this._children = [];
+			}
 		}
 
 		_createClass(TimelineState, [{
@@ -295,17 +417,17 @@ return /******/ (function(modules) { // webpackBootstrap
 		}, {
 			key: "children",
 			get: function get() {
-				if (this._type !== TimelineState.TYPE.TIMELINE) {
-					throw Error("TimelineState instance is not of type Timeline and there does not have children!");
-				}
+				// if (this._type !== TimelineState.TYPE.TIMELINE) {
+				// 	throw Error("TimelineState instance is not of type Timeline and there does not have children!");
+				// }
 				return this._children;
 			}
 		}, {
 			key: "properties",
 			get: function get() {
-				if (this._type !== TimelineState.TYPE.TWEEN) {
-					throw Error("TimelineState instance is not of type Tween and there does not have properties!");
-				}
+				// if (this._type !== TimelineState.TYPE.TWEEN) {
+				// 	throw Error("TimelineState instance is not of type Tween and there does not have properties!");
+				// }
 				return this._properties;
 			}
 		}]);
@@ -318,354 +440,6 @@ return /******/ (function(modules) { // webpackBootstrap
 
 /***/ },
 /* 3 */
-/***/ function(module, exports) {
-
-	"use strict";
-
-	Object.defineProperty(exports, "__esModule", {
-		value: true
-	});
-
-	var _extends = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; };
-
-	var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
-
-	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-	var _DEFAULT_OPTIONS = {
-		loop: false,
-		"in": 0,
-		out: null,
-		fillMode: 0
-	};
-
-	var TimelineAbstract = (function () {
-		_createClass(TimelineAbstract, null, [{
-			key: "FILL_MODE",
-			value: {
-				NOME: 0,
-				FORWARD: 1,
-				BACKWARD: 2,
-				BOTH: 3
-			},
-			enumerable: true
-		}]);
-
-		function TimelineAbstract(name, options) {
-			_classCallCheck(this, TimelineAbstract);
-
-			this._options = null;
-			this._name = null;
-
-			this._init(name, options);
-		}
-
-		/*________________________________________________________
-	 	PUBLIC CLASS METHODS
-	 ________________________________________________________*/
-
-		_createClass(TimelineAbstract, [{
-			key: "getState",
-			value: function getState(time) {
-				return this._getState(time);
-			}
-		}, {
-			key: "_init",
-
-			/*________________________________________________________
-	  	PRIVATE CLASS METHODS
-	  ________________________________________________________*/
-
-			value: function _init(name, options) {
-
-				this._validateOptions(options);
-
-				this._options = _extends({}, _DEFAULT_OPTIONS, options);
-
-				this._name = name;
-			}
-		}, {
-			key: "_validateOptions",
-			value: function _validateOptions(options) {}
-		}, {
-			key: "_getState",
-			value: function _getState(time) {}
-
-			/**
-	   * Method iterates through keyframes for each property and determines our relative duration between in and out
-	   *
-	   * @private
-	   */
-		}, {
-			key: "_updateRelativeDuration",
-			value: function _updateRelativeDuration(absoluteDuration) {
-				var inIndex = -1;
-				var duration = absoluteDuration;
-
-				if (this._options["in"] == null) {
-					this._options["in"] = 0;
-				} else {
-					// adjust the duration
-					if (this._options["in"] > duration) {
-						throw Error("In point is set beyond the end of the tween!");
-					}
-					duration -= this._options["in"];
-				}
-
-				if (this._options.out != null) {
-					duration = this._options.out - this._options["in"];
-				} else {
-					this._options.out = this._options["in"] + duration;
-				}
-
-				this._duration = duration;
-
-				if (this._options["in"] > this._options.out) {
-					throw Error("tween in is greater than out!");
-				}
-			}
-
-			/**
-	   * Method takes any time and wraps it accordingly to be within in and out points
-	   *
-	   * @private
-	   * @param {Number} time Time in milisecond
-	   * @return Number
-	   */
-		}, {
-			key: "_loopTime",
-			value: function _loopTime(time) {
-				return ((time - this._options["in"]) % this._duration + this._duration) % this._duration;
-			}
-
-			/**
-	   * Method takes any time and checks whether the time value requires wrapping, if so then returns wrapped time
-	   *
-	   * @private
-	   * @param {Number} time Time in milisecond
-	   * @return Number
-	   */
-		}, {
-			key: "_resolveTime",
-			value: function _resolveTime(time) {
-				if (time < this._options["in"]) {
-					if (this._options.fillMode === TimelineAbstract.FILL_MODE.BACKWARD || this._options.fillMode === TimelineAbstract.FILL_MODE.BOTH) {
-						if (this._options.loop) {
-							return this._loopTime(time);
-						}
-					}
-				}
-
-				if (time > this._options.out) {
-					if (this._options.fillMode === TimelineAbstract.FILL_MODE.FORWARD || this._options.fillMode === TimelineAbstract.FILL_MODE.BOTH) {
-						if (this._options.loop) {
-							return this._loopTime(time);
-						}
-					}
-				}
-
-				return time;
-			}
-		}, {
-			key: "duration",
-			get: function get() {
-				return this._duration;
-			}
-		}, {
-			key: "name",
-			get: function get() {
-				return this._name;
-			}
-		}, {
-			key: "in",
-			get: function get() {
-				return this._options["in"];
-			}
-		}, {
-			key: "out",
-			get: function get() {
-				return this._options.out;
-			}
-		}, {
-			key: "loop",
-			get: function get() {
-				return this._options.loop;
-			}
-		}, {
-			key: "fillMode",
-			get: function get() {
-				return this._options.fillMode;
-			}
-		}]);
-
-		return TimelineAbstract;
-	})();
-
-	exports["default"] = TimelineAbstract;
-	module.exports = exports["default"];
-
-/***/ },
-/* 4 */
-/***/ function(module, exports, __webpack_require__) {
-
-	'use strict';
-
-	Object.defineProperty(exports, '__esModule', {
-		value: true
-	});
-
-	var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
-
-	var _get = function get(_x, _x2, _x3) { var _again = true; _function: while (_again) { var object = _x, property = _x2, receiver = _x3; _again = false; if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { _x = parent; _x2 = property; _x3 = receiver; _again = true; desc = parent = undefined; continue _function; } } else if ('value' in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } } };
-
-	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
-
-	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
-
-	function _inherits(subClass, superClass) { if (typeof superClass !== 'function' && superClass !== null) { throw new TypeError('Super expression must either be null or a function, not ' + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
-
-	var _timeline = __webpack_require__(1);
-
-	var _timeline2 = _interopRequireDefault(_timeline);
-
-	var InteractiveTimeline = (function (_Timeline) {
-		_inherits(InteractiveTimeline, _Timeline);
-
-		function InteractiveTimeline(name, options) {
-			_classCallCheck(this, InteractiveTimeline);
-
-			_get(Object.getPrototypeOf(InteractiveTimeline.prototype), 'constructor', this).call(this, name, options);
-			this._sequences = [];
-		}
-
-		/*________________________________________________________
-	 	PUBLIC CLASS METHODS
-	 ________________________________________________________*/
-
-		_createClass(InteractiveTimeline, [{
-			key: 'increment',
-			value: function increment(timeDelta) {
-				return this._increment(timeDelta);
-			}
-		}, {
-			key: 'setSequences',
-			value: function setSequences(sequences) {
-				this._setSequences(sequences);
-			}
-		}, {
-			key: 'getSequences',
-			value: function getSequences() {
-				return this._sequences;
-			}
-
-			/*________________________________________________________
-	  	PRIVATE CLASS METHODS
-	  ________________________________________________________*/
-
-		}, {
-			key: '_increment',
-			value: function _increment(timeDelta) {
-				var outDelta = undefined,
-				    sequenceOutTime = undefined;
-
-				// get current sequence
-				var currentSequence = this._getSequenceByTime(this._currentTime);
-
-				this._currentTime += timeDelta;
-
-				// get updated sequence with current time
-				var prospectiveSequence = this._getSequenceByTime(this._currentTime);
-
-				// using sequences currently only works travelling forwards
-				if (timeDelta > 0) {
-					// we only start to think about redirect if last time was within a sequence
-					if (currentSequence != null) {
-						// check to see we have left the current sequence and that the current sequence has a next location
-						if (currentSequence !== prospectiveSequence && currentSequence.next != null) {
-
-							// if there is a prospective then check that its not the next of current
-							if (prospectiveSequence != null) {
-
-								if (currentSequence.next !== prospectiveSequence.label) {
-									// if duration is set on current the outDelta should be from after the duration
-									if (currentSequence.duration) {
-										sequenceOutTime = currentSequence.time + currentSequence.duration;
-									} else {
-										// otherwise no duration set the current sequence extends to the begining of the prospective
-										sequenceOutTime = prospectiveSequence.time;
-									}
-								} else {
-									sequenceOutTime = prospectiveSequence.time;
-								}
-							} else {
-								// if prospective is null and current is not, then a duration must be set, so use that
-
-								sequenceOutTime = currentSequence.time + currentSequence.duration;
-							}
-							// this makes the assumption we have travelled forward and have moved out of the current sequence to the right,
-							// if we have move out of the sequence to the left therefore backwards the outDelta is from the end of the
-							// sequence
-							outDelta = this._currentTime - sequenceOutTime;
-							// adjust time and update current
-							prospectiveSequence = this._getSequenceByLabel(currentSequence.next);
-
-							this.currentTime = prospectiveSequence.time + outDelta;
-						}
-					}
-				}
-
-				return this._getState(this._currentTime);
-			}
-		}, {
-			key: '_setSequences',
-			value: function _setSequences(sequences) {
-				// merge sequence
-				// validate check for overlaping
-				this._sequences = sequences;
-			}
-		}, {
-			key: '_getSequenceByTime',
-			value: function _getSequenceByTime(time) {
-				var sequence = undefined;
-
-				for (var i = 0; i < this._sequences.length; i++) {
-					if (this._sequences[i].time > time) {
-						break;
-					}
-					sequence = this._sequences[i];
-				}
-
-				if (sequence) {
-					// check if time is beyond last sequence
-					if (sequence.duration && time > sequence.time + sequence.duration) {
-						return null;
-					}
-					// return the current sequence
-					return sequence;
-				}
-
-				// no relevent sequences
-				return null;
-			}
-		}, {
-			key: '_getSequenceByLabel',
-			value: function _getSequenceByLabel(label) {
-				for (var i = 0; i < this._sequences.length; i++) {
-					if (this._sequences[i].label === label) {
-						return this._sequences[i];
-					}
-				}
-			}
-		}]);
-
-		return InteractiveTimeline;
-	})(_timeline2['default']);
-
-	exports['default'] = InteractiveTimeline;
-	module.exports = exports['default'];
-
-/***/ },
-/* 5 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -678,15 +452,11 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
 
-	var _get = function get(_x, _x2, _x3) { var _again = true; _function: while (_again) { var object = _x, property = _x2, receiver = _x3; _again = false; if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { _x = parent; _x2 = property; _x3 = receiver; _again = true; desc = parent = undefined; continue _function; } } else if ('value' in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } } };
-
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
 	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
 
-	function _inherits(subClass, superClass) { if (typeof superClass !== 'function' && superClass !== null) { throw new TypeError('Super expression must either be null or a function, not ' + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
-
-	var _motionTween = __webpack_require__(6);
+	var _motionTween = __webpack_require__(4);
 
 	var _motionTween2 = _interopRequireDefault(_motionTween);
 
@@ -694,20 +464,20 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	var _timelineState2 = _interopRequireDefault(_timelineState);
 
-	var _timelineAbstract = __webpack_require__(3);
+	var _timelineAbstract = __webpack_require__(12);
 
 	var _timelineAbstract2 = _interopRequireDefault(_timelineAbstract);
 
-	var Tween = (function (_TimelineAbstract) {
-		_inherits(Tween, _TimelineAbstract);
-
-		function Tween(name, options) {
+	var Tween = (function () {
+		function Tween(name) {
 			_classCallCheck(this, Tween);
 
-			_get(Object.getPrototypeOf(Tween.prototype), 'constructor', this).call(this, name, options);
-
 			this._propertyKeyframesMap = null;
-			this._propertyKeyframesMap = new Map();
+			this._options = null;
+			this._name = null;
+			this._duration = null;
+
+			this._init(name);
 		}
 
 		/*________________________________________________________
@@ -716,23 +486,30 @@ return /******/ (function(modules) { // webpackBootstrap
 
 		_createClass(Tween, [{
 			key: 'addKeyframes',
-			value: function addKeyframes(property, keyframes) {
-				this._addKeyframes(property, keyframes);
+			value: function addKeyframes(keyframesObject) {
+				this._addKeyframes(keyframesObject);
 			}
+		}, {
+			key: 'getState',
+			value: function getState(time) {
+				return this._getState(time);
+			}
+		}, {
+			key: '_init',
 
 			/*________________________________________________________
 	  	PRIVATE CLASS METHODS
 	  ________________________________________________________*/
 
-		}, {
-			key: '_validateOptions',
-			value: function _validateOptions(options) {
-				_get(Object.getPrototypeOf(Tween.prototype), '_validateOptions', this).call(this, options);
+			value: function _init(name) {
 
-				// if (options.out != null && options.duration != null) {
-				// 	throw Error("specify either and out time or duration, not both!");
-				// }
+				this._name = name;
+
+				this._propertyKeyframesMap = new Map();
 			}
+
+			// _validateOptions(options) {}
+
 		}, {
 			key: '_addKeyframes',
 			value: function _addKeyframes(keyframesObject) {
@@ -747,10 +524,80 @@ return /******/ (function(modules) { // webpackBootstrap
 					_this._propertyKeyframesMap.set(key, keyframes);
 				});
 
-				var absoluteDuration = this._getAbsoluteDuration();
+				this._duration = this._getKeyframesDuration();
 
-				this._updateRelativeDuration(absoluteDuration);
+				// this._updateRelativeDuration(absoluteDuration);
 			}
+
+			// /**
+			//  * Method iterates through keyframes for each property and determines our relative duration between in and out
+			//  *
+			//  * @private
+			//  */
+			// _updateRelativeDuration(absoluteDuration) {
+			// 	let inIndex = -1;
+			// 	let duration = absoluteDuration;
+
+			// 	if (this._options.in == null) {
+			// 		this._options.in = 0;
+			// 	} else {
+			// 		// adjust the duration
+			// 		if (this._options.in > duration) {
+			// 			throw Error("In point is set beyond the end of the tween!");
+			// 		}
+			// 		duration -= this._options.in;
+			// 	}
+
+			// 	if (this._options.out != null) {
+			// 		duration = this._options.out - this._options.in;
+			// 	} else {
+			// 		this._options.out = this._options.in + duration;
+			// 	}
+
+			// 	this._duration = duration;
+
+			// 	if (this._options.in > this._options.out) {
+			// 		throw Error("tween in is greater than out!");
+			// 	}
+			// }
+
+			// /**
+			//  * Method takes any time and wraps it accordingly to be within in and out points
+			//  *
+			//  * @private
+			//  * @param {Number} time Time in milisecond
+			//  * @return Number
+			//  */
+			// _loopTime(time) {
+			// 	return (((time - this._options.in) % this._duration) + this._duration) % this._duration;
+			// }
+
+			// /**
+			//  * Method takes any time and checks whether the time value requires wrapping, if so then returns wrapped time
+			//  *
+			//  * @private
+			//  * @param {Number} time Time in milisecond
+			//  * @return Number
+			//  */
+			// _resolveTime(time) {
+			// 	if (time < this._options.in) {
+			// 		if (this._options.fillMode === TimelineAbstract.FILL_MODE.BACKWARD || this._options.fillMode === TimelineAbstract.FILL_MODE.BOTH) {
+			// 			if (this._options.loop) {
+			// 				return this._loopTime(time);
+			// 			}
+			// 		}
+			// 	}
+
+			// 	if (time > this._options.out) {
+			// 		if (this._options.fillMode === TimelineAbstract.FILL_MODE.FORWARD || this._options.fillMode === TimelineAbstract.FILL_MODE.BOTH) {
+			// 			if (this._options.loop) {
+			// 				return this._loopTime(time);
+			// 			}
+			// 		}
+			// 	}
+
+			// 	return time;
+			// }
 
 			/**
 	   * Method clones the array of keyframes
@@ -769,8 +616,8 @@ return /******/ (function(modules) { // webpackBootstrap
 				return keyframesCloned;
 			}
 		}, {
-			key: '_getAbsoluteDuration',
-			value: function _getAbsoluteDuration() {
+			key: '_getKeyframesDuration',
+			value: function _getKeyframesDuration() {
 				var duration = 0;
 				// the durationdetermined here is relative to the entire tween, yet to be clipped by in and out
 				this._propertyKeyframesMap.forEach(function (keyframes, key) {
@@ -796,7 +643,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 				var state = new _timelineState2['default'](_timelineState2['default'].TYPE.TWEEN, this._name);
 
-				time = this._resolveTime(time);
+				// time = this._resolveTime(time);
 
 				this._propertyKeyframesMap.forEach(function (keyframes, property) {
 
@@ -849,17 +696,17 @@ return /******/ (function(modules) { // webpackBootstrap
 				}
 
 				if (previousKeyframe == null) {
-					if (time < this._options['in'] && this._options.fillMode !== _timelineAbstract2['default'].FILL_MODE.BACKWARD && this._options.fillMode !== _timelineAbstract2['default'].FILL_MODE.BOTH) {
-						return value;
-					}
+					// if (time < this._options.in && (this._options.fillMode !== TimelineAbstract.FILL_MODE.BACKWARD && this._options.fillMode !== TimelineAbstract.FILL_MODE.BOTH)) {
+					// 	return value;
+					// }
 
 					return nextKeyframe.value;
 				}
 
 				if (nextKeyframe == null) {
-					if (time > this._options.out && this._options.fillMode !== _timelineAbstract2['default'].FILL_MODE.FORWARD && this._options.fillMode !== _timelineAbstract2['default'].FILL_MODE.BOTH) {
-						return value;
-					}
+					// if (time > this._options.out && (this._options.fillMode !== TimelineAbstract.FILL_MODE.FORWARD && this._options.fillMode !== TimelineAbstract.FILL_MODE.BOTH)) {
+					// 	return value;
+					// }
 
 					return previousKeyframe.value;
 				}
@@ -909,16 +756,26 @@ return /******/ (function(modules) { // webpackBootstrap
 
 				return tweenedValue;
 			}
+		}, {
+			key: 'duration',
+			get: function get() {
+				return this._duration;
+			}
+		}, {
+			key: 'name',
+			get: function get() {
+				return this._name;
+			}
 		}]);
 
 		return Tween;
-	})(_timelineAbstract2['default']);
+	})();
 
 	exports['default'] = Tween;
 	module.exports = exports['default'];
 
 /***/ },
-/* 6 */
+/* 4 */
 /***/ function(module, exports, __webpack_require__) {
 
 	"use strict";
@@ -935,31 +792,31 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-	var _Utils = __webpack_require__(7);
+	var _Utils = __webpack_require__(5);
 
 	var _Utils2 = _interopRequireDefault(_Utils);
 
-	var _Easing = __webpack_require__(8);
+	var _Easing = __webpack_require__(6);
 
 	var Easing = _interopRequireWildcard(_Easing);
 
-	var _animatorsCubicBezier = __webpack_require__(9);
+	var _animatorsCubicBezier = __webpack_require__(7);
 
 	var _animatorsCubicBezier2 = _interopRequireDefault(_animatorsCubicBezier);
 
-	var _animatorsEase = __webpack_require__(10);
+	var _animatorsEase = __webpack_require__(8);
 
 	var _animatorsEase2 = _interopRequireDefault(_animatorsEase);
 
-	var _animatorsFriction = __webpack_require__(11);
+	var _animatorsFriction = __webpack_require__(9);
 
 	var _animatorsFriction2 = _interopRequireDefault(_animatorsFriction);
 
-	var _animatorsSpring = __webpack_require__(12);
+	var _animatorsSpring = __webpack_require__(10);
 
 	var _animatorsSpring2 = _interopRequireDefault(_animatorsSpring);
 
-	var _animatorsSpringRK4 = __webpack_require__(13);
+	var _animatorsSpringRK4 = __webpack_require__(11);
 
 	var _animatorsSpringRK42 = _interopRequireDefault(_animatorsSpringRK4);
 
@@ -1144,7 +1001,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	module.exports = exports["default"];
 
 /***/ },
-/* 7 */
+/* 5 */
 /***/ function(module, exports) {
 
 	'use strict';
@@ -1231,7 +1088,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	module.exports = exports['default'];
 
 /***/ },
-/* 8 */
+/* 6 */
 /***/ function(module, exports) {
 
 	// t: current time, b: begInnIng value, c: change In value, d: duration
@@ -1434,7 +1291,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	}
 
 /***/ },
-/* 9 */
+/* 7 */
 /***/ function(module, exports) {
 
 	"use strict";
@@ -1528,7 +1385,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	module.exports = exports["default"];
 
 /***/ },
-/* 10 */
+/* 8 */
 /***/ function(module, exports, __webpack_require__) {
 
 	"use strict";
@@ -1545,7 +1402,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-	var _Easing = __webpack_require__(8);
+	var _Easing = __webpack_require__(6);
 
 	var Easing = _interopRequireWildcard(_Easing);
 
@@ -1600,7 +1457,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	module.exports = exports["default"];
 
 /***/ },
-/* 11 */
+/* 9 */
 /***/ function(module, exports) {
 
 	"use strict";
@@ -1674,7 +1531,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	module.exports = exports["default"];
 
 /***/ },
-/* 12 */
+/* 10 */
 /***/ function(module, exports) {
 
 	"use strict";
@@ -1744,7 +1601,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	module.exports = exports["default"];
 
 /***/ },
-/* 13 */
+/* 11 */
 /***/ function(module, exports) {
 
 	// r4k from http://mtdevans.com/2013/05/fourth-order-runge-kutta-algorithm-in-javascript-with-demo/
@@ -1848,6 +1705,354 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	exports["default"] = SpringRK4;
 	module.exports = exports["default"];
+
+/***/ },
+/* 12 */
+/***/ function(module, exports) {
+
+	"use strict";
+
+	Object.defineProperty(exports, "__esModule", {
+		value: true
+	});
+
+	var _extends = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; };
+
+	var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
+
+	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+	var _DEFAULT_OPTIONS = {
+		loop: false,
+		"in": 0,
+		out: null,
+		fillMode: 0
+	};
+
+	var TimelineAbstract = (function () {
+		_createClass(TimelineAbstract, null, [{
+			key: "FILL_MODE",
+			value: {
+				NOME: 0,
+				FORWARD: 1,
+				BACKWARD: 2,
+				BOTH: 3
+			},
+			enumerable: true
+		}]);
+
+		function TimelineAbstract(name, options) {
+			_classCallCheck(this, TimelineAbstract);
+
+			this._options = null;
+			this._name = null;
+
+			this._init(name, options);
+		}
+
+		/*________________________________________________________
+	 	PUBLIC CLASS METHODS
+	 ________________________________________________________*/
+
+		_createClass(TimelineAbstract, [{
+			key: "getState",
+			value: function getState(time) {
+				return this._getState(time);
+			}
+		}, {
+			key: "_init",
+
+			/*________________________________________________________
+	  	PRIVATE CLASS METHODS
+	  ________________________________________________________*/
+
+			value: function _init(name, options) {
+
+				this._validateOptions(options);
+
+				this._options = _extends({}, _DEFAULT_OPTIONS, options);
+
+				this._name = name;
+			}
+		}, {
+			key: "_validateOptions",
+			value: function _validateOptions(options) {}
+		}, {
+			key: "_getState",
+			value: function _getState(time) {}
+
+			/**
+	   * Method iterates through keyframes for each property and determines our relative duration between in and out
+	   *
+	   * @private
+	   */
+		}, {
+			key: "_updateRelativeDuration",
+			value: function _updateRelativeDuration(absoluteDuration) {
+				var inIndex = -1;
+				var duration = absoluteDuration;
+
+				if (this._options["in"] == null) {
+					this._options["in"] = 0;
+				} else {
+					// adjust the duration
+					if (this._options["in"] > duration) {
+						throw Error("In point is set beyond the end of the tween!");
+					}
+					duration -= this._options["in"];
+				}
+
+				if (this._options.out != null) {
+					duration = this._options.out - this._options["in"];
+				} else {
+					this._options.out = this._options["in"] + duration;
+				}
+
+				this._duration = duration;
+
+				if (this._options["in"] > this._options.out) {
+					throw Error("tween in is greater than out!");
+				}
+			}
+
+			/**
+	   * Method takes any time and wraps it accordingly to be within in and out points
+	   *
+	   * @private
+	   * @param {Number} time Time in milisecond
+	   * @return Number
+	   */
+		}, {
+			key: "_loopTime",
+			value: function _loopTime(time) {
+				return ((time - this._options["in"]) % this._duration + this._duration) % this._duration;
+			}
+
+			/**
+	   * Method takes any time and checks whether the time value requires wrapping, if so then returns wrapped time
+	   *
+	   * @private
+	   * @param {Number} time Time in milisecond
+	   * @return Number
+	   */
+		}, {
+			key: "_resolveTime",
+			value: function _resolveTime(time) {
+				if (time < this._options["in"]) {
+					if (this._options.fillMode === TimelineAbstract.FILL_MODE.BACKWARD || this._options.fillMode === TimelineAbstract.FILL_MODE.BOTH) {
+						if (this._options.loop) {
+							return this._loopTime(time);
+						}
+					}
+				}
+
+				if (time > this._options.out) {
+					if (this._options.fillMode === TimelineAbstract.FILL_MODE.FORWARD || this._options.fillMode === TimelineAbstract.FILL_MODE.BOTH) {
+						if (this._options.loop) {
+							return this._loopTime(time);
+						}
+					}
+				}
+
+				return time;
+			}
+		}, {
+			key: "duration",
+			get: function get() {
+				return this._duration;
+			}
+		}, {
+			key: "name",
+			get: function get() {
+				return this._name;
+			}
+		}, {
+			key: "in",
+			get: function get() {
+				return this._options["in"];
+			}
+		}, {
+			key: "out",
+			get: function get() {
+				return this._options.out;
+			}
+		}, {
+			key: "loop",
+			get: function get() {
+				return this._options.loop;
+			}
+		}, {
+			key: "fillMode",
+			get: function get() {
+				return this._options.fillMode;
+			}
+		}]);
+
+		return TimelineAbstract;
+	})();
+
+	exports["default"] = TimelineAbstract;
+	module.exports = exports["default"];
+
+/***/ },
+/* 13 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+
+	Object.defineProperty(exports, '__esModule', {
+		value: true
+	});
+
+	var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
+
+	var _get = function get(_x, _x2, _x3) { var _again = true; _function: while (_again) { var object = _x, property = _x2, receiver = _x3; _again = false; if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { _x = parent; _x2 = property; _x3 = receiver; _again = true; desc = parent = undefined; continue _function; } } else if ('value' in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } } };
+
+	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
+
+	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
+
+	function _inherits(subClass, superClass) { if (typeof superClass !== 'function' && superClass !== null) { throw new TypeError('Super expression must either be null or a function, not ' + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
+
+	var _timeline = __webpack_require__(1);
+
+	var _timeline2 = _interopRequireDefault(_timeline);
+
+	var InteractiveTimeline = (function (_Timeline) {
+		_inherits(InteractiveTimeline, _Timeline);
+
+		function InteractiveTimeline(name, options) {
+			_classCallCheck(this, InteractiveTimeline);
+
+			_get(Object.getPrototypeOf(InteractiveTimeline.prototype), 'constructor', this).call(this, name, options);
+			this._sequences = [];
+		}
+
+		/*________________________________________________________
+	 	PUBLIC CLASS METHODS
+	 ________________________________________________________*/
+
+		_createClass(InteractiveTimeline, [{
+			key: 'increment',
+			value: function increment(timeDelta) {
+				return this._increment(timeDelta);
+			}
+		}, {
+			key: 'setSequences',
+			value: function setSequences(sequences) {
+				this._setSequences(sequences);
+			}
+		}, {
+			key: 'getSequences',
+			value: function getSequences() {
+				return this._sequences;
+			}
+
+			/*________________________________________________________
+	  	PRIVATE CLASS METHODS
+	  ________________________________________________________*/
+
+		}, {
+			key: '_increment',
+			value: function _increment(timeDelta) {
+				var outDelta = undefined,
+				    sequenceOutTime = undefined;
+
+				// get current sequence
+				var currentSequence = this._getSequenceByTime(this._currentTime);
+
+				this._currentTime += timeDelta;
+
+				// get updated sequence with current time
+				var prospectiveSequence = this._getSequenceByTime(this._currentTime);
+
+				// using sequences currently only works travelling forwards
+				if (timeDelta > 0) {
+					// we only start to think about redirect if last time was within a sequence
+					if (currentSequence != null) {
+						// check to see we have left the current sequence and that the current sequence has a next location
+						if (currentSequence !== prospectiveSequence && currentSequence.next != null) {
+
+							// if there is a prospective then check that its not the next of current
+							if (prospectiveSequence != null) {
+
+								if (currentSequence.next !== prospectiveSequence.label) {
+									// if duration is set on current the outDelta should be from after the duration
+									if (currentSequence.duration) {
+										sequenceOutTime = currentSequence.time + currentSequence.duration;
+									} else {
+										// otherwise no duration set the current sequence extends to the begining of the prospective
+										sequenceOutTime = prospectiveSequence.time;
+									}
+								} else {
+									sequenceOutTime = prospectiveSequence.time;
+								}
+							} else {
+								// if prospective is null and current is not, then a duration must be set, so use that
+
+								sequenceOutTime = currentSequence.time + currentSequence.duration;
+							}
+							// this makes the assumption we have travelled forward and have moved out of the current sequence to the right,
+							// if we have move out of the sequence to the left therefore backwards the outDelta is from the end of the
+							// sequence
+							outDelta = this._currentTime - sequenceOutTime;
+							// adjust time and update current
+							prospectiveSequence = this._getSequenceByLabel(currentSequence.next);
+
+							this.currentTime = prospectiveSequence.time + outDelta;
+						}
+					}
+				}
+
+				return this._getState(this._currentTime);
+			}
+		}, {
+			key: '_setSequences',
+			value: function _setSequences(sequences) {
+				// merge sequence
+				// validate check for overlaping
+				this._sequences = sequences;
+			}
+		}, {
+			key: '_getSequenceByTime',
+			value: function _getSequenceByTime(time) {
+				var sequence = undefined;
+
+				for (var i = 0; i < this._sequences.length; i++) {
+					if (this._sequences[i].time > time) {
+						break;
+					}
+					sequence = this._sequences[i];
+				}
+
+				if (sequence) {
+					// check if time is beyond last sequence
+					if (sequence.duration && time > sequence.time + sequence.duration) {
+						return null;
+					}
+					// return the current sequence
+					return sequence;
+				}
+
+				// no relevent sequences
+				return null;
+			}
+		}, {
+			key: '_getSequenceByLabel',
+			value: function _getSequenceByLabel(label) {
+				for (var i = 0; i < this._sequences.length; i++) {
+					if (this._sequences[i].label === label) {
+						return this._sequences[i];
+					}
+				}
+			}
+		}]);
+
+		return InteractiveTimeline;
+	})(_timeline2['default']);
+
+	exports['default'] = InteractiveTimeline;
+	module.exports = exports['default'];
 
 /***/ }
 /******/ ])

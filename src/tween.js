@@ -3,17 +3,23 @@ import TimelineState from './timeline-state';
 import TimelineAbstract from './timeline-abstract'
 
 
-export default class Tween extends TimelineAbstract {
+
+
+export default class Tween {
 
 
 	_propertyKeyframesMap = null;
 
+	_options = null;
+
+	_name = null;
+
+	_duration = null;
 
 
-	constructor(name, options) {
-		super(name, options);
+	constructor(name) {
 
-		this._propertyKeyframesMap = new Map();
+		this._init(name);
 	}
 
 
@@ -26,7 +32,13 @@ export default class Tween extends TimelineAbstract {
 	PUBLIC CLASS METHODS
 	________________________________________________________*/
 
-	addKeyframes(property, keyframes) { this._addKeyframes(property, keyframes); }
+	addKeyframes(keyframesObject) { this._addKeyframes(keyframesObject); }
+
+	getState(time) { return this._getState(time); }
+
+	get duration() { return this._duration; }
+
+	get name() { return this._name; }
 
 
 
@@ -40,13 +52,16 @@ export default class Tween extends TimelineAbstract {
 	PRIVATE CLASS METHODS
 	________________________________________________________*/
 
-	_validateOptions(options) {
-		super._validateOptions(options);
 
-		// if (options.out != null && options.duration != null) {
-		// 	throw Error("specify either and out time or duration, not both!");
-		// }
+	_init(name) {
+
+		this._name = name;
+
+		this._propertyKeyframesMap = new Map();
 	}
+	
+
+	// _validateOptions(options) {}
 
 
 	_addKeyframes(keyframesObject) {
@@ -60,10 +75,90 @@ export default class Tween extends TimelineAbstract {
 
 		});
 
-		const absoluteDuration = this._getAbsoluteDuration();
+		this._duration = this._getKeyframesDuration();
 
-		this._updateRelativeDuration(absoluteDuration);
+
+
+		// this._updateRelativeDuration(absoluteDuration);
 	}
+
+
+	// /**
+	//  * Method iterates through keyframes for each property and determines our relative duration between in and out
+	//  *
+	//  * @private
+	//  */
+	// _updateRelativeDuration(absoluteDuration) {
+	// 	let inIndex = -1;
+	// 	let duration = absoluteDuration;
+
+	// 	if (this._options.in == null) {
+	// 		this._options.in = 0;
+	// 	} else {
+	// 		// adjust the duration
+	// 		if (this._options.in > duration) {
+	// 			throw Error("In point is set beyond the end of the tween!");
+	// 		}
+	// 		duration -= this._options.in;
+	// 	}
+
+	// 	if (this._options.out != null) {
+	// 		duration = this._options.out - this._options.in;
+	// 	} else {
+	// 		this._options.out = this._options.in + duration;
+	// 	}
+
+	// 	this._duration = duration;
+
+	// 	if (this._options.in > this._options.out) {
+	// 		throw Error("tween in is greater than out!");
+	// 	}
+	// }
+
+
+	// /**
+	//  * Method takes any time and wraps it accordingly to be within in and out points
+	//  *
+	//  * @private
+	//  * @param {Number} time Time in milisecond
+	//  * @return Number
+	//  */
+	// _loopTime(time) {
+	// 	return (((time - this._options.in) % this._duration) + this._duration) % this._duration;
+	// }
+
+
+	// /**
+	//  * Method takes any time and checks whether the time value requires wrapping, if so then returns wrapped time
+	//  *
+	//  * @private
+	//  * @param {Number} time Time in milisecond
+	//  * @return Number
+	//  */
+	// _resolveTime(time) {
+	// 	if (time < this._options.in) {
+	// 		if (this._options.fillMode === TimelineAbstract.FILL_MODE.BACKWARD || this._options.fillMode === TimelineAbstract.FILL_MODE.BOTH) {
+	// 			if (this._options.loop) {
+	// 				return this._loopTime(time);
+	// 			}
+	// 		}
+	// 	}
+
+	// 	if (time > this._options.out) {
+	// 		if (this._options.fillMode === TimelineAbstract.FILL_MODE.FORWARD || this._options.fillMode === TimelineAbstract.FILL_MODE.BOTH) {
+	// 			if (this._options.loop) {
+	// 				return this._loopTime(time);
+	// 			}
+	// 		}
+	// 	}
+
+	// 	return time;
+	// }
+
+
+
+
+
 
 
 	/**
@@ -82,7 +177,7 @@ export default class Tween extends TimelineAbstract {
 	}
 
 
-	_getAbsoluteDuration() {
+	_getKeyframesDuration() {
 		let duration = 0;
 		// the durationdetermined here is relative to the entire tween, yet to be clipped by in and out
 		this._propertyKeyframesMap.forEach((keyframes, key) => {
@@ -105,7 +200,7 @@ export default class Tween extends TimelineAbstract {
 	_getState(time) {
 		const state = new TimelineState(TimelineState.TYPE.TWEEN, this._name);
 
-		time = this._resolveTime(time);
+		// time = this._resolveTime(time);
 
 		this._propertyKeyframesMap.forEach((keyframes, property) => {
 
@@ -158,17 +253,17 @@ export default class Tween extends TimelineAbstract {
 		}
 
 		if (previousKeyframe == null) {
-			if (time < this._options.in && (this._options.fillMode !== TimelineAbstract.FILL_MODE.BACKWARD && this._options.fillMode !== TimelineAbstract.FILL_MODE.BOTH)) {
-				return value; 
-			}
+			// if (time < this._options.in && (this._options.fillMode !== TimelineAbstract.FILL_MODE.BACKWARD && this._options.fillMode !== TimelineAbstract.FILL_MODE.BOTH)) {
+			// 	return value; 
+			// }
 
 			return nextKeyframe.value;
 		}
 
 		if (nextKeyframe == null) {
-			if (time > this._options.out && (this._options.fillMode !== TimelineAbstract.FILL_MODE.FORWARD && this._options.fillMode !== TimelineAbstract.FILL_MODE.BOTH)) {
-				return value; 
-			}
+			// if (time > this._options.out && (this._options.fillMode !== TimelineAbstract.FILL_MODE.FORWARD && this._options.fillMode !== TimelineAbstract.FILL_MODE.BOTH)) {
+			// 	return value; 
+			// }
 
 			return previousKeyframe.value;
 		}

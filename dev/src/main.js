@@ -1,5 +1,5 @@
 
-import {InteractiveTimeline, Tween, MotionTween} from "../../dist/timeline";
+import {Timeline, Tween, MotionTween} from "../../dist/timeline";
 
 class Main {
 
@@ -10,7 +10,7 @@ class Main {
 
 
 	_init() {
-		const timeline = new InteractiveTimeline("root");
+		// const timeline = new InteractiveTimeline("root");
 
 		const propertyKeyframes = {
 			x: [
@@ -41,34 +41,60 @@ class Main {
 				}]
 		}
 
-		const t = new Tween("simpleTest", {
+		// const t = new Tween("simpleTest", {
+		// 	loop: true,
+		// 	fillMode: 0,
+		// 	in: 50
+		// });
+
+		const tween = new Tween("ball");
+
+		tween.addKeyframes(propertyKeyframes);
+
+		const timeline = new Timeline("park");
+
+		timeline.addChild(tween, {
+			fillMode: "both",
+			in: 250,
 			loop: true,
-			fillMode: 0,
-			in: 50
+			out: null,
+			time: 250
 		});
 
-		t.addKeyframes(propertyKeyframes);
+		// timeline.addChild(tween, {
+		// 	fillMode: 3,
+		// 	in: 250,
+		// 	loop: false,
+		// 	out: 400,
+		// 	time: 250
+		// });
 
-		timeline.addChild(t, 0);
-		timeline.addChild(t, 100);
+		console.log(timeline.duration);
+		console.dir(timeline.getState(125));
 
 
-		const sequences = [
-			{
-				time: 0,
-				duration: 250,
-				label: "intro",
-				next: "intro"
-			},
-			{
-				time: 250,
-				duration: 250,
-				label: "outro",
-				next: "outro"
-			}
-		];
+		// t.addKeyframes(propertyKeyframes);
 
-		timeline.setSequences(sequences);
+		// timeline.addChild(t, 0);
+		// timeline.addChild(t, 100);
+
+
+		// const sequences = [
+		// 	{
+		// 		time: 0,
+		// 		duration: 250,
+		// 		label: "intro",
+		// 		next: "intro"
+		// 	},
+		// 	{
+		// 		time: 250,
+		// 		duration: 250,
+		// 		label: "outro",
+		// 		next: "outro"
+		// 	}
+		// ];
+
+		// timeline.setSequences(sequences);
 
 
 		// window.timeline = timeline;
@@ -76,9 +102,9 @@ class Main {
 		// const xValue = timeline.getState(450).get("simpleTest").x;
 		// console.log(xValue);
 
-		for (let state of timeline) {
-			console.dir(state);
-		}
+		// for (let state of timeline) {
+		// 	console.dir(state);
+		// }
 
 
 

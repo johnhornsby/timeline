@@ -2,16 +2,16 @@ export default class TimelineState {
 
 
 	static TYPE = {
-		TWEEN: 0,
-		TIMELINE: 1
+		TWEEN: "tween",
+		TIMELINE: "timeline"
 	};
 
 
 	_type = TimelineState.TYPE.TWEEN;
 
-	_children = [];
+	_children = null;
 
-	_properties = {};
+	_properties = null;
 
 	_name = null;
 
@@ -19,6 +19,12 @@ export default class TimelineState {
 	constructor(type, name) {
 		this._type = type;
 		this._name = name;
+
+		this._properties = {};
+
+		if (this._type == TimelineState.TYPE.TIMELINE) {
+			this._children = [];
+		}
 	}
 
 
@@ -43,17 +49,17 @@ export default class TimelineState {
 
 
 	get children() { 
-		if (this._type !== TimelineState.TYPE.TIMELINE) {
-			throw Error("TimelineState instance is not of type Timeline and there does not have children!");
-		}
+		// if (this._type !== TimelineState.TYPE.TIMELINE) {
+		// 	throw Error("TimelineState instance is not of type Timeline and there does not have children!");
+		// }
 		return this._children;
 	}
 
 
 	get properties() { 
-		if (this._type !== TimelineState.TYPE.TWEEN) {
-			throw Error("TimelineState instance is not of type Tween and there does not have properties!");
-		}
+		// if (this._type !== TimelineState.TYPE.TWEEN) {
+		// 	throw Error("TimelineState instance is not of type Tween and there does not have properties!");
+		// }
 		return this._properties;
 
 	}
