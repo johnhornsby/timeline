@@ -5,8 +5,8 @@ export default class InteractiveTimeline extends Timeline {
 
 	_sequences = [];
 
-	constructor(options) {
-		super(options);
+	constructor(name, options) {
+		super(name, options);
 	}
 
 

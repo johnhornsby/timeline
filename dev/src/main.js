@@ -10,7 +10,7 @@ class Main {
 
 
 	_init() {
-		const timeline = new InteractiveTimeline();
+		const timeline = new InteractiveTimeline("root");
 
 		const propertyKeyframes = {
 			x: [
@@ -41,13 +41,16 @@ class Main {
 				}]
 		}
 
-		const t = new Tween(propertyKeyframes, "simpleTest", {
+		const t = new Tween("simpleTest", {
 			loop: true,
-			fillMode: 0
+			fillMode: 0,
+			in: 50
 		});
 
-		timeline.addTween(t, 0);
-		timeline.addTween(t, 0);
+		t.addKeyframes(propertyKeyframes);
+
+		timeline.addChild(t, 0);
+		timeline.addChild(t, 100);
 
 
 		const sequences = [
@@ -70,8 +73,8 @@ class Main {
 
 		// window.timeline = timeline;
 
-		const xValue = timeline.getState(450).get("simpleTest").x;
-		console.log(xValue);
+		// const xValue = timeline.getState(450).get("simpleTest").x;
+		// console.log(xValue);
 
 		for (let state of timeline) {
 			console.dir(state);

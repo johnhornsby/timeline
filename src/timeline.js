@@ -1,30 +1,22 @@
+import TimelineState from './timeline-state';
+import TimelineAbstract from './timeline-abstract'
 
-
-const TIMELINE_DEFAULT_OPTIONS = {
-	loop: false,
+const _TIMELINE_DEFAULT_OPTIONS = {
 	fps: 60
 }
 
 
-export default class Timeline {
+export default class Timeline extends TimelineAbstract {
+
+
+	// An Array of Objects {tween, time}
+	_children = [];
 
 	_currentTime = 0;
 
-	_loop = null;
 
-	_options = null;
-
-	_duration = null;
-
-	// An Array of Objects {tween, time}
-	_tweens = [];
-
-	// tally of un named instance, allow easy generation of new instance names
-	_unnamedInstances = 0;
-
-	constructor(options) {
-
-		this._init(options);
+	constructor(name, options) {
+		super(name, options);
 	}
 
 
@@ -41,17 +33,7 @@ export default class Timeline {
 
 	next() { return this._next(); }
 
-	addTween(tween, time, instanceName) { this._addTween(tween, time, instanceName); }
-	
-	getState(time) { return this._getState(time); }
-
-	set duration(duration) { this._duration = this._options.duration = duration; }
-
-	get duration() { return this._duration; }
-	
-	set loop(boolean) { this._loop = boolean; }
-
-	get loop() { return this._loop; }
+	addChild(child, time) { this._addChild(child, time); }
 
 	set currentTime (time) { this._currentTime = time; }
 
@@ -68,79 +50,56 @@ export default class Timeline {
 	PRIVATE CLASS METHODS
 	________________________________________________________*/
 
-	_init(options) {
+	_init(name, options) {
+		super._init(name, options);
+
 		this._options = {
-			...TIMELINE_DEFAULT_OPTIONS,
-			...options
+			..._TIMELINE_DEFAULT_OPTIONS,
+			...this._options
 		};
 	}
 	
 
-	_addTween(tween, time = 0, instanceName = null) {
+	_addChild(child, time = 0) {
 		const o = {
-			tween,
-			time,
-			instanceName
+			child,
+			time
 		}
 
-		if (instanceName == null && (tween.identifier == null || tween.identifier === "")) {
-			throw Error("Tween can't be added without an valid String identifier!");
-		}
+		this._children.push(o);
 
-		let instanceCount = 1;
-		for (let i = 0; i < this._tweens.length; i++) {
-			if (this._tweens[i].tween === tween) {
-				instanceCount += 1;
-			}
-		}
+		const absoluteDuration = this._getAbsoluteDuration();
 
-		let insertIndex = this._tweens.length;
-		let instanceCountString = "";
-
-		if (instanceName != null) {
-			// check if we already an instance of that name
-			for (let i = 0; i < this._tweens.length; i++) {
-				// if so then replace
-				if (this._tweens[i].instanceName === instanceName) {
-					insertIndex = i;
-					break;
-				}
-			}
-		} else {
-			if (instanceCount > 1) {
-				instanceCountString = String(instanceCount);
-			}
-			o.instanceName = `${tween.identifier}${instanceCountString}`;
-
-		}
-
-		this._tweens[insertIndex] = o;
-		this._updateDuration();
-
+		this._updateRelativeDuration(absoluteDuration);
 	}
 
 	
-	_updateDuration() {
-		 this._duration = 0;
-			this._tweens.forEach((tweenObjectData, index) => {
-				this._duration = Math.max(this._duration, tweenObjectData.time + tweenObjectData.tween.duration);
-			});
+	_getAbsoluteDuration() {
+		let duration = 0;
+
+		this._children.forEach((childObjectData, index) => {
+			duration = Math.max(duration, childObjectData.time + childObjectData.child.duration);
+		});
+
+		return duration;
 	}
 	
 	
 	_getState(time) {
-		const stateMap = new Map();
-		// iterate over map properies
-		this._tweens.forEach((tweenObjectData, index) => {
-			// interate over object properties
-			stateMap.set(tweenObjectData.instanceName, tweenObjectData.tween.getState(time - tweenObjectData.time));
-		}); 
-		// return map
-		return stateMap;
+		const state = new TimelineState(TimelineState.TYPE.TIMELINE, this._name);
+		let tweenState;
+
+		this._children.forEach((childObjectData, index) => {
+			tweenState = childObjectData.child.getState(time - childObjectData.time);
+			state.addChild(tweenState);
+		});
+
+		return state;
 	}
 
 
 	_next() {
+
 		let time = this._currentTime;
 
 		this._currentTime += (1000 / this._options.fps);
