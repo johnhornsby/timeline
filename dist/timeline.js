@@ -191,7 +191,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 				// set out property if not already set
 				if (options.out == null) {
-					o.settings.out = child.duration;
+					o.settings.out = options.time + child.duration;
 				}
 
 				this._children.push(o);
@@ -212,7 +212,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 				this._children.forEach(function (childObjectData, index) {
 
-					duration = Math.max(duration, childObjectData.settings.time + (childObjectData.settings.out - childObjectData.settings['in']));
+					duration = Math.max(duration, childObjectData.settings.out);
 				});
 
 				return duration;
@@ -229,14 +229,24 @@ return /******/ (function(modules) { // webpackBootstrap
 
 				this._children.forEach(function (childObjectData, index) {
 
-					// @TODO resolve our time according to our tween settings
+					// loop is accounted for here, fill is automatically built into tween
 					resolvedTime = _this._resolveChildRelativeTime(time, childObjectData.settings);
 
 					tweenState = childObjectData.child.getState(resolvedTime);
 
+					// @TODO the only thing we need to do is to clip state to in and out unless fill permits
+					if (time < childObjectData.settings['in'] || time > childObjectData.settings.out) {
+						tweenState = _this._clipState(tweenState);
+					}
+
 					state.addChild(tweenState);
 				});
 
+				return state;
+			}
+		}, {
+			key: '_clipState',
+			value: function _clipState(state) {
 				return state;
 			}
 
@@ -249,10 +259,10 @@ return /******/ (function(modules) { // webpackBootstrap
 	   */
 		}, {
 			key: '_loopTime',
-			value: function _loopTime(childTime, childSettings) {
-				var duration = childSettings.out - childSettings['in'];
-				var time = childTime - childSettings['in'];
-				var loopedTime = (time % duration + duration) % duration;
+			value: function _loopTime(time, childSettings) {
+				var childEditDuration = childSettings.out - childSettings['in'];
+				var realativeTime = time - childSettings['in'];
+				var loopedTime = (realativeTime % childEditDuration + childEditDuration) % childEditDuration;
 				return childSettings['in'] + loopedTime;
 			}
 
@@ -267,23 +277,21 @@ return /******/ (function(modules) { // webpackBootstrap
 			key: '_resolveChildRelativeTime',
 			value: function _resolveChildRelativeTime(time, childSettings) {
 
-				// time position within the timeline
-				var childAbsoluteX = childSettings.time - childSettings['in'];
 				// now we have the beginning position of the child we can determine the time relative to the child
-				var childRelativeTime = time - childAbsoluteX;
+				var childRelativeTime = time - childSettings.time;
 
-				if (childRelativeTime < childSettings['in']) {
+				if (time < childSettings['in']) {
 					if (childSettings.fillMode === Timeline.FILL_MODE.BACKWARD || childSettings.fillMode === Timeline.FILL_MODE.BOTH) {
 						if (childSettings.loop) {
-							return this._loopTime(childRelativeTime, childSettings);
+							return this._loopTime(time, childSettings) - childSettings.time;
 						}
 					}
 				}
 
-				if (childRelativeTime > childSettings.out) {
+				if (time > childSettings.out) {
 					if (childSettings.fillMode === Timeline.FILL_MODE.FORWARD || childSettings.fillMode === Timeline.FILL_MODE.BOTH) {
 						if (childSettings.loop) {
-							return this._loopTime(childRelativeTime, childSettings);
+							return this._loopTime(time, childSettings) - childSettings.time;
 						}
 					}
 				}

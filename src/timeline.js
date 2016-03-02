@@ -84,7 +84,7 @@ export default class Timeline extends Tween {
 
 		// set out property if not already set
 		if (options.out == null) {
-			o.settings.out = child.duration;
+			o.settings.out = options.time + child.duration;
 		}
 
 		this._children.push(o);
@@ -107,7 +107,7 @@ export default class Timeline extends Tween {
 
 		this._children.forEach((childObjectData, index) => {
 
-			duration = Math.max(duration, childObjectData.settings.time + (childObjectData.settings.out - childObjectData.settings.in));
+			duration = Math.max(duration, childObjectData.settings.out);
 	
 		});
 
@@ -116,17 +116,23 @@ export default class Timeline extends Tween {
 	
 	
 	_getState(time) {
-		const state = new TimelineState(TimelineState.TYPE.TIMELINE, this._name);
+		let state = new TimelineState(TimelineState.TYPE.TIMELINE, this._name);
 		let tweenState;
 
 		let resolvedTime
 
 		this._children.forEach((childObjectData, index) => {
 
-			// @TODO resolve our time according to our tween settings
+			// loop is accounted for here, fill is automatically built into tween
 			resolvedTime = this._resolveChildRelativeTime(time, childObjectData.settings);
 
 			tweenState = childObjectData.child.getState(resolvedTime);
+
+			// @TODO the only thing we need to do is to clip state to in and out unless fill permits
+			if (time < childObjectData.settings.in || time > childObjectData.settings.out) {
+				tweenState = this._clipState(tweenState);
+			}
+
 
 			state.addChild(tweenState);
 		});
@@ -136,6 +142,11 @@ export default class Timeline extends Tween {
 
 
 
+	_clipState(state) {
+		return state;
+	}
+
+
 	/**
 	 * Method takes any time and wraps it accordingly to be within in and out points
 	 *
@@ -143,10 +154,10 @@ export default class Timeline extends Tween {
 	 * @param {Number} time Time in milisecond
 	 * @return Number
 	 */
-	_loopTime(childTime, childSettings) {
-		const duration = childSettings.out - childSettings.in;
-		const time = childTime - childSettings.in;
-		const loopedTime = (((time) % duration) + duration) % duration;
+	_loopTime(time, childSettings) {
+		const childEditDuration = childSettings.out - childSettings.in;
+		const realativeTime = time - childSettings.in;
+		const loopedTime = (((realativeTime) % childEditDuration) + childEditDuration) % childEditDuration;
 		return childSettings.in + loopedTime;
 	}
 
@@ -160,23 +171,22 @@ export default class Timeline extends Tween {
 	 */
 	_resolveChildRelativeTime(time, childSettings) {
 
-		// time position within the timeline
-		const childAbsoluteX = childSettings.time - childSettings.in;
+
 		// now we have the beginning position of the child we can determine the time relative to the child
-		const childRelativeTime = time - childAbsoluteX;
+		const childRelativeTime = time - childSettings.time;
 		
-		if (childRelativeTime < childSettings.in) {
+		if (time < childSettings.in) {
 			if (childSettings.fillMode === Timeline.FILL_MODE.BACKWARD || childSettings.fillMode === Timeline.FILL_MODE.BOTH) {
 				if (childSettings.loop) {
-					return this._loopTime(childRelativeTime, childSettings);
+					return this._loopTime(time, childSettings) - childSettings.time;
 				}
 			}
 		}
 
-		if (childRelativeTime > childSettings.out) {
+		if (time > childSettings.out) {
 			if (childSettings.fillMode === Timeline.FILL_MODE.FORWARD || childSettings.fillMode === Timeline.FILL_MODE.BOTH) {
 				if (childSettings.loop) {
-					return this._loopTime(childRelativeTime, childSettings);
+					return this._loopTime(time, childSettings) - childSettings.time;
 				}
 			}
 		}

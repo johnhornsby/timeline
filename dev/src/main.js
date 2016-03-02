@@ -55,7 +55,7 @@ class Main {
 
 		timeline.addChild(tween, {
 			fillMode: "both",
-			in: 250,
+			in: 500,
 			loop: true,
 			out: null,
 			time: 250
