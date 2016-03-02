@@ -282,9 +282,14 @@ return /******/ (function(modules) { // webpackBootstrap
 
 				if (time < childSettings['in']) {
 					if (childSettings.fillMode === Timeline.FILL_MODE.BACKWARD || childSettings.fillMode === Timeline.FILL_MODE.BOTH) {
+
 						if (childSettings.loop) {
 							return this._loopTime(time, childSettings) - childSettings.time;
+						} else {
+							return childSettings['in'] - childSettings.time;
 						}
+					} else {
+						return undefined;
 					}
 				}
 
@@ -292,7 +297,11 @@ return /******/ (function(modules) { // webpackBootstrap
 					if (childSettings.fillMode === Timeline.FILL_MODE.FORWARD || childSettings.fillMode === Timeline.FILL_MODE.BOTH) {
 						if (childSettings.loop) {
 							return this._loopTime(time, childSettings) - childSettings.time;
+						} else {
+							return childSettings.out - childSettings.time;
 						}
+					} else {
+						return undefined;
 					}
 				}
 

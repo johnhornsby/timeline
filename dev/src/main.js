@@ -54,9 +54,9 @@ class Main {
 		const timeline = new Timeline("park");
 
 		timeline.addChild(tween, {
-			fillMode: "both",
+			fillMode: "none",
 			in: 500,
-			loop: true,
+			loop: false,
 			out: null,
 			time: 250
 		});
@@ -70,7 +70,7 @@ class Main {
 		// });
 
 		console.log(timeline.duration);
-		console.dir(timeline.getState(125));
+		console.dir(timeline.getState(750));
 
 
 		// t.addKeyframes(propertyKeyframes);

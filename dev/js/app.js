@@ -7461,9 +7461,9 @@
 				var timeline = new _distTimeline.Timeline("park");
 
 				timeline.addChild(tween, {
-					fillMode: "both",
+					fillMode: "none",
 					"in": 500,
-					loop: true,
+					loop: false,
 					out: null,
 					time: 250
 				});
@@ -7477,7 +7477,7 @@
 				// });
 
 				console.log(timeline.duration);
-				console.dir(timeline.getState(125));
+				console.dir(timeline.getState(750));
 
 				// t.addKeyframes(propertyKeyframes);
 
@@ -7849,17 +7849,26 @@
 
 							if (time < childSettings['in']) {
 								if (childSettings.fillMode === Timeline.FILL_MODE.BACKWARD || childSettings.fillMode === Timeline.FILL_MODE.BOTH) {
+
 									if (childSettings.loop) {
-										return this._loopTime(childRelativeTime, childSettings);
+										return this._loopTime(time, childSettings) - childSettings.time;
+									} else {
+										return childSettings['in'] - childSettings.time;
 									}
+								} else {
+									return undefined;
 								}
 							}
 
 							if (time > childSettings.out) {
 								if (childSettings.fillMode === Timeline.FILL_MODE.FORWARD || childSettings.fillMode === Timeline.FILL_MODE.BOTH) {
 									if (childSettings.loop) {
-										return this._loopTime(childRelativeTime, childSettings);
+										return this._loopTime(time, childSettings) - childSettings.time;
+									} else {
+										return childSettings.out - childSettings.time;
 									}
+								} else {
+									return undefined;
 								}
 							}
 
