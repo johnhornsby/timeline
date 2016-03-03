@@ -170,8 +170,6 @@ export default class Timeline extends Tween {
 	 * @return Number
 	 */
 	_resolveChildRelativeTime(time, childSettings) {
-
-
 		// now we have the beginning position of the child we can determine the time relative to the child
 		const childRelativeTime = time - childSettings.time;
 		
