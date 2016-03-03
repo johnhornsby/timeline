@@ -7414,101 +7414,111 @@
 		function Main() {
 			_classCallCheck(this, Main);
 
+			// bind draw
+			this._update = this._update.bind(this);
+
+			this._lastDrawInterval = null;
+
+			this._timeline = null;
+
 			this._init();
 		}
 
 		_createClass(Main, [{
 			key: "_init",
 			value: function _init() {
-				// const timeline = new InteractiveTimeline("root");
-
 				var propertyKeyframes = {
-					x: [{
+					radius: [{
 						value: 0,
-						time: 0
-					}, // 	animatorType: MotionTween.animatorType.cubicBezier,
-					// animatorOptions: {
-					// 	controlPoints: [.15, .66, .83, .67]
-					// }
-					{
-						value: 100,
-						time: 250,
-						hold: false
-						// 	animatorType: MotionTween.animatorType.cubicBezier,
-						// animatorOptions: {
-						// 	controlPoints: [.15, .66, .83, .67]
-						// }
+						time: 0,
+						animatorType: _distTimeline.MotionTween.animatorType.cubicBezier,
+						animatorOptions: {
+							controlPoints: [.15, .66, .83, .67]
+						}
 					}, {
 						value: 50,
+						time: 250,
+						hold: false,
+						animatorType: _distTimeline.MotionTween.animatorType.cubicBezier,
+						animatorOptions: {
+							controlPoints: [.15, .66, .83, .67]
+						}
+					}, {
+						value: 0,
 						time: 500
 					}]
 				};
 
-				// const t = new Tween("simpleTest", {
-				// 	loop: true,
-				// 	fillMode: 0,
-				// 	in: 50
-				// });
-
-				// animatorType: MotionTween.animatorType.cubicBezier,
-				// animatorOptions: {
-				// 	controlPoints: [.15, .66, .83, .67]
-				// }
 				var tween = new _distTimeline.Tween("ball");
 
 				tween.addKeyframes(propertyKeyframes);
 
-				var timeline = new _distTimeline.Timeline("park");
+				var timeline = new _distTimeline.InteractiveTimeline("park");
 
 				timeline.addChild(tween, {
-					fillMode: "none",
-					"in": 500,
+					fillMode: "both",
+					"in": 0,
 					loop: false,
 					out: null,
-					time: 250
+					time: 0
 				});
 
-				// timeline.addChild(tween, {
-				// 	fillMode: 3,
-				// 	in: 250,
-				// 	loop: false,
-				// 	out: 400,
-				// 	time: 250
-				// });
+				var sequences = [{
+					time: 0,
+					duration: 500,
+					label: "loop",
+					next: "loop"
+				}];
 
-				console.log(timeline.duration);
-				console.dir(timeline.getState(750));
+				timeline.setSequences(sequences);
 
-				// t.addKeyframes(propertyKeyframes);
+				this._timeline = timeline;
 
-				// timeline.addChild(t, 0);
-				// timeline.addChild(t, 100);
+				this._build();
+				this._update();
+			}
+		}, {
+			key: "_build",
+			value: function _build() {
+				var canvas = document.createElement("canvas");
+				canvas.width = 128;
+				canvas.height = 128;
+				document.body.appendChild(canvas);
 
-				// const sequences = [
-				// 	{
-				// 		time: 0,
-				// 		duration: 250,
-				// 		label: "intro",
-				// 		next: "intro"
-				// 	},
-				// 	{
-				// 		time: 250,
-				// 		duration: 250,
-				// 		label: "outro",
-				// 		next: "outro"
-				// 	}
-				// ];
+				this._ctx = canvas.getContext("2d");
+			}
+		}, {
+			key: "_update",
+			value: function _update() {
+				var now = new Date().getTime();
+				var delta = 0;
+				if (this._lastDrawInterval != null) {
+					delta = now - this._lastDrawInterval;
+				}
+				this._lastDrawInterval = now;
 
-				// timeline.setSequences(sequences);
+				this._draw(delta);
+				window.requestAnimationFrame(this._update);
+			}
+		}, {
+			key: "_draw",
+			value: function _draw(delta) {
+				this._ctx.clearRect(0, 0, 128, 128);
 
-				// window.timeline = timeline;
+				var state = this._timeline.increment(delta);
 
-				// const xValue = timeline.getState(450).get("simpleTest").x;
-				// console.log(xValue);
-
-				// for (let state of timeline) {
-				// 	console.dir(state);
-				// }
+				for (var i = 0; i < state.children.length; i++) {
+					if (state.children[i].type === "tween" && state.children[i].name === "ball") {
+						this._drawCircle(state.children[i].properties.radius);
+					}
+				}
+			}
+		}, {
+			key: "_drawCircle",
+			value: function _drawCircle(radius) {
+				this._ctx.beginPath();
+				this._ctx.arc(64, 64, radius, 0, 2 * Math.PI);
+				this._ctx.stroke();
 			}
 		}]);
 
