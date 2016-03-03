@@ -14,7 +14,7 @@ export default class Tween {
 
 	_name = null;
 
-	_duration = null;
+	_duration = 0;
 
 
 	constructor(name) {
@@ -52,16 +52,16 @@ export default class Tween {
 	PRIVATE CLASS METHODS
 	________________________________________________________*/
 
-
 	_init(name) {
+
+		if (name == null) {
+			throw Error("Name not specified");
+		}
 
 		this._name = name;
 
 		this._propertyKeyframesMap = new Map();
 	}
-	
-
-	// _validateOptions(options) {}
 
 
 	_addKeyframes(keyframesObject) {
@@ -72,93 +72,10 @@ export default class Tween {
 			keyframes = this._cloneKeyframes(keyframesObject[key]);
 
 			this._propertyKeyframesMap.set(key, keyframes);
-
 		});
 
 		this._duration = this._getKeyframesDuration();
-
-
-
-		// this._updateRelativeDuration(absoluteDuration);
 	}
-
-
-	// /**
-	//  * Method iterates through keyframes for each property and determines our relative duration between in and out
-	//  *
-	//  * @private
-	//  */
-	// _updateRelativeDuration(absoluteDuration) {
-	// 	let inIndex = -1;
-	// 	let duration = absoluteDuration;
-
-	// 	if (this._options.in == null) {
-	// 		this._options.in = 0;
-	// 	} else {
-	// 		// adjust the duration
-	// 		if (this._options.in > duration) {
-	// 			throw Error("In point is set beyond the end of the tween!");
-	// 		}
-	// 		duration -= this._options.in;
-	// 	}
-
-	// 	if (this._options.out != null) {
-	// 		duration = this._options.out - this._options.in;
-	// 	} else {
-	// 		this._options.out = this._options.in + duration;
-	// 	}
-
-	// 	this._duration = duration;
-
-	// 	if (this._options.in > this._options.out) {
-	// 		throw Error("tween in is greater than out!");
-	// 	}
-	// }
-
-
-	// /**
-	//  * Method takes any time and wraps it accordingly to be within in and out points
-	//  *
-	//  * @private
-	//  * @param {Number} time Time in milisecond
-	//  * @return Number
-	//  */
-	// _loopTime(time) {
-	// 	return (((time - this._options.in) % this._duration) + this._duration) % this._duration;
-	// }
-
-
-	// /**
-	//  * Method takes any time and checks whether the time value requires wrapping, if so then returns wrapped time
-	//  *
-	//  * @private
-	//  * @param {Number} time Time in milisecond
-	//  * @return Number
-	//  */
-	// _resolveTime(time) {
-	// 	if (time < this._options.in) {
-	// 		if (this._options.fillMode === TimelineAbstract.FILL_MODE.BACKWARD || this._options.fillMode === TimelineAbstract.FILL_MODE.BOTH) {
-	// 			if (this._options.loop) {
-	// 				return this._loopTime(time);
-	// 			}
-	// 		}
-	// 	}
-
-	// 	if (time > this._options.out) {
-	// 		if (this._options.fillMode === TimelineAbstract.FILL_MODE.FORWARD || this._options.fillMode === TimelineAbstract.FILL_MODE.BOTH) {
-	// 			if (this._options.loop) {
-	// 				return this._loopTime(time);
-	// 			}
-	// 		}
-	// 	}
-
-	// 	return time;
-	// }
-
-
-
-
-
 
 
 	/**
@@ -199,8 +116,6 @@ export default class Tween {
 	 */
 	_getState(time) {
 		const state = new TimelineState(TimelineState.TYPE.TWEEN, this._name);
-
-		// time = this._resolveTime(time);
 
 		this._propertyKeyframesMap.forEach((keyframes, property) => {
 
@@ -253,18 +168,10 @@ export default class Tween {
 		}
 
 		if (previousKeyframe == null) {
-			// if (time < this._options.in && (this._options.fillMode !== TimelineAbstract.FILL_MODE.BACKWARD && this._options.fillMode !== TimelineAbstract.FILL_MODE.BOTH)) {
-			// 	return value; 
-			// }
-
 			return nextKeyframe.value;
 		}
 
 		if (nextKeyframe == null) {
-			// if (time > this._options.out && (this._options.fillMode !== TimelineAbstract.FILL_MODE.FORWARD && this._options.fillMode !== TimelineAbstract.FILL_MODE.BOTH)) {
-			// 	return value; 
-			// }
-
 			return previousKeyframe.value;
 		}
 

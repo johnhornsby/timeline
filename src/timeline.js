@@ -24,7 +24,6 @@ export default class Timeline extends Tween {
 	};
 
 
-	// An Array of Objects {tween, time}
 	_children = [];
 
 	_currentTime = 0;
@@ -92,8 +91,6 @@ export default class Timeline extends Tween {
 		const absoluteDuration = this._getChildrenDuration();
 
 		this._duration = absoluteDuration;
-
-		// this._updateRelativeDuration(absoluteDuration);
 	}
 
 
@@ -128,21 +125,9 @@ export default class Timeline extends Tween {
 
 			tweenState = childObjectData.child.getState(resolvedTime);
 
-			// @TODO the only thing we need to do is to clip state to in and out unless fill permits
-			if (time < childObjectData.settings.in || time > childObjectData.settings.out) {
-				tweenState = this._clipState(tweenState);
-			}
-
-
 			state.addChild(tweenState);
 		});
 
-		return state;
-	}
-
-
-
-	_clipState(state) {
 		return state;
 	}
 
@@ -197,30 +182,6 @@ export default class Timeline extends Tween {
 				return undefined;
 			}
 		}
-
-		// time = 200
-		// settings.in = 100
-		// settings.time = 150
-
-		// settings.time - settings.in = -50
-		// childRelativeTime = time - -50 = 250
-
-
-		// if (time < this._options.in) {
-		// 	if (this._options.fillMode === TimelineAbstract.FILL_MODE.BACKWARD || this._options.fillMode === TimelineAbstract.FILL_MODE.BOTH) {
-		// 		if (this._options.loop) {
-		// 			return this._loopTime(time);
-		// 		}
-		// 	}
-		// }
-
-		// if (time > this._options.out) {
-		// 	if (this._options.fillMode === TimelineAbstract.FILL_MODE.FORWARD || this._options.fillMode === TimelineAbstract.FILL_MODE.BOTH) {
-		// 		if (this._options.loop) {
-		// 			return this._loopTime(time);
-		// 		}
-		// 	}
-		// }
 
 		return childRelativeTime;
 	}

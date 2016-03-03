@@ -136,8 +136,6 @@ return /******/ (function(modules) { // webpackBootstrap
 				BACKWARD: "backward",
 				BOTH: "both"
 			},
-
-			// An Array of Objects {tween, time}
 			enumerable: true
 		}]);
 
@@ -199,8 +197,6 @@ return /******/ (function(modules) { // webpackBootstrap
 				var absoluteDuration = this._getChildrenDuration();
 
 				this._duration = absoluteDuration;
-
-				// this._updateRelativeDuration(absoluteDuration);
 			}
 		}, {
 			key: '_removeChild',
@@ -234,19 +230,9 @@ return /******/ (function(modules) { // webpackBootstrap
 
 					tweenState = childObjectData.child.getState(resolvedTime);
 
-					// @TODO the only thing we need to do is to clip state to in and out unless fill permits
-					if (time < childObjectData.settings['in'] || time > childObjectData.settings.out) {
-						tweenState = _this._clipState(tweenState);
-					}
-
 					state.addChild(tweenState);
 				});
 
-				return state;
-			}
-		}, {
-			key: '_clipState',
-			value: function _clipState(state) {
 				return state;
 			}
 
@@ -276,7 +262,6 @@ return /******/ (function(modules) { // webpackBootstrap
 		}, {
 			key: '_resolveChildRelativeTime',
 			value: function _resolveChildRelativeTime(time, childSettings) {
-
 				// now we have the beginning position of the child we can determine the time relative to the child
 				var childRelativeTime = time - childSettings.time;
 
@@ -304,29 +289,6 @@ return /******/ (function(modules) { // webpackBootstrap
 						return undefined;
 					}
 				}
-
-				// time = 200
-				// settings.in = 100
-				// settings.time = 150
-
-				// settings.time - settings.in = -50
-				// childRelativeTime = time - -50 = 250
-
-				// if (time < this._options.in) {
-				// 	if (this._options.fillMode === TimelineAbstract.FILL_MODE.BACKWARD || this._options.fillMode === TimelineAbstract.FILL_MODE.BOTH) {
-				// 		if (this._options.loop) {
-				// 			return this._loopTime(time);
-				// 		}
-				// 	}
-				// }
-
-				// if (time > this._options.out) {
-				// 	if (this._options.fillMode === TimelineAbstract.FILL_MODE.FORWARD || this._options.fillMode === TimelineAbstract.FILL_MODE.BOTH) {
-				// 		if (this._options.loop) {
-				// 			return this._loopTime(time);
-				// 		}
-				// 	}
-				// }
 
 				return childRelativeTime;
 			}
@@ -524,9 +486,6 @@ return /******/ (function(modules) { // webpackBootstrap
 
 				this._propertyKeyframesMap = new Map();
 			}
-
-			// _validateOptions(options) {}
-
 		}, {
 			key: '_addKeyframes',
 			value: function _addKeyframes(keyframesObject) {
@@ -542,79 +501,7 @@ return /******/ (function(modules) { // webpackBootstrap
 				});
 
 				this._duration = this._getKeyframesDuration();
-
-				// this._updateRelativeDuration(absoluteDuration);
 			}
-
-			// /**
-			//  * Method iterates through keyframes for each property and determines our relative duration between in and out
-			//  *
-			//  * @private
-			//  */
-			// _updateRelativeDuration(absoluteDuration) {
-			// 	let inIndex = -1;
-			// 	let duration = absoluteDuration;
-
-			// 	if (this._options.in == null) {
-			// 		this._options.in = 0;
-			// 	} else {
-			// 		// adjust the duration
-			// 		if (this._options.in > duration) {
-			// 			throw Error("In point is set beyond the end of the tween!");
-			// 		}
-			// 		duration -= this._options.in;
-			// 	}
-
-			// 	if (this._options.out != null) {
-			// 		duration = this._options.out - this._options.in;
-			// 	} else {
-			// 		this._options.out = this._options.in + duration;
-			// 	}
-
-			// 	this._duration = duration;
-
-			// 	if (this._options.in > this._options.out) {
-			// 		throw Error("tween in is greater than out!");
-			// 	}
-			// }
-
-			// /**
-			//  * Method takes any time and wraps it accordingly to be within in and out points
-			//  *
-			//  * @private
-			//  * @param {Number} time Time in milisecond
-			//  * @return Number
-			//  */
-			// _loopTime(time) {
-			// 	return (((time - this._options.in) % this._duration) + this._duration) % this._duration;
-			// }
-
-			// /**
-			//  * Method takes any time and checks whether the time value requires wrapping, if so then returns wrapped time
-			//  *
-			//  * @private
-			//  * @param {Number} time Time in milisecond
-			//  * @return Number
-			//  */
-			// _resolveTime(time) {
-			// 	if (time < this._options.in) {
-			// 		if (this._options.fillMode === TimelineAbstract.FILL_MODE.BACKWARD || this._options.fillMode === TimelineAbstract.FILL_MODE.BOTH) {
-			// 			if (this._options.loop) {
-			// 				return this._loopTime(time);
-			// 			}
-			// 		}
-			// 	}
-
-			// 	if (time > this._options.out) {
-			// 		if (this._options.fillMode === TimelineAbstract.FILL_MODE.FORWARD || this._options.fillMode === TimelineAbstract.FILL_MODE.BOTH) {
-			// 			if (this._options.loop) {
-			// 				return this._loopTime(time);
-			// 			}
-			// 		}
-			// 	}
-
-			// 	return time;
-			// }
 
 			/**
 	   * Method clones the array of keyframes
@@ -659,8 +546,6 @@ return /******/ (function(modules) { // webpackBootstrap
 				var _this2 = this;
 
 				var state = new _timelineState2['default'](_timelineState2['default'].TYPE.TWEEN, this._name);
-
-				// time = this._resolveTime(time);
 
 				this._propertyKeyframesMap.forEach(function (keyframes, property) {
 
@@ -713,18 +598,10 @@ return /******/ (function(modules) { // webpackBootstrap
 				}
 
 				if (previousKeyframe == null) {
-					// if (time < this._options.in && (this._options.fillMode !== TimelineAbstract.FILL_MODE.BACKWARD && this._options.fillMode !== TimelineAbstract.FILL_MODE.BOTH)) {
-					// 	return value;
-					// }
-
 					return nextKeyframe.value;
 				}
 
 				if (nextKeyframe == null) {
-					// if (time > this._options.out && (this._options.fillMode !== TimelineAbstract.FILL_MODE.FORWARD && this._options.fillMode !== TimelineAbstract.FILL_MODE.BOTH)) {
-					// 	return value;
-					// }
-
 					return previousKeyframe.value;
 				}
 

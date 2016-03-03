@@ -24,21 +24,21 @@ class Main {
 				 	time: 0,
 				 	animatorType: MotionTween.animatorType.cubicBezier,
 					animatorOptions: {
-						controlPoints: [.15, .66, .83, .67]
+						controlPoints: [0, 0.75, 0.25, 1]
 					}
 				},
 				{
 					value: 50,
-				 	time: 250,
+				 	time: 1000,
 				 	hold: false,
 				 	animatorType: MotionTween.animatorType.cubicBezier,
 					animatorOptions: {
-						controlPoints: [.15, .66, .83, .67]
+						controlPoints: [0.75, 0, 1, 0.25]
 					}
 				},
 				{
 					value: 0,
-					time: 500
+					time: 2000
 				}]
 		}
 
@@ -48,18 +48,12 @@ class Main {
 
 		const timeline = new InteractiveTimeline("park");
 
-		timeline.addChild(tween, {
-			fillMode: "both",
-			in: 0,
-			loop: false,
-			out: null,
-			time: 0
-		});
+		timeline.addChild(tween, { fillMode: "both", in: 0, loop: false, time: 0 });
 
 		const sequences = [
 			{
 				time: 0,
-				duration: 500,
+				duration: 5000,
 				label: "loop",
 				next: "loop"
 			}
