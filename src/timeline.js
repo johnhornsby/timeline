@@ -85,8 +85,8 @@ export default class Timeline extends Tween {
 		}
 
 		// set out property if not already set
-		if (options.out == null) {
-			o.settings.out = options.time + child.duration;
+		if (o.settings.out == null) {
+			o.settings.out = o.settings.time + child.duration;
 		}
 
 		this._children.push(o);
