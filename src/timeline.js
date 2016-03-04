@@ -78,7 +78,10 @@ export default class Timeline extends Tween {
 		// clone options into settings property
 		const o = {
 			child,
-			settings: {...options}
+			settings: {
+				..._CHILD_DEFAULT_OPTIONS,
+				...options
+			}
 		}
 
 		// set out property if not already set

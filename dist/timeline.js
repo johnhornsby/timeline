@@ -184,7 +184,7 @@ return /******/ (function(modules) { // webpackBootstrap
 				// clone options into settings property
 				var o = {
 					child: child,
-					settings: _extends({}, options)
+					settings: _extends({}, _CHILD_DEFAULT_OPTIONS, options)
 				};
 
 				// set out property if not already set
@@ -454,7 +454,7 @@ return /******/ (function(modules) { // webpackBootstrap
 			this._propertyKeyframesMap = null;
 			this._options = null;
 			this._name = null;
-			this._duration = null;
+			this._duration = 0;
 
 			this._init(name);
 		}
@@ -481,6 +481,10 @@ return /******/ (function(modules) { // webpackBootstrap
 	  ________________________________________________________*/
 
 			value: function _init(name) {
+
+				if (name == null) {
+					throw Error("Name not specified");
+				}
 
 				this._name = name;
 
