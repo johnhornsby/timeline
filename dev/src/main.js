@@ -17,51 +17,60 @@ class Main {
 
 
 	_init() {
-		const propertyKeyframes = {
+
+		const tween = new Tween("ball", {
 			radius: [
 				{
-					value: 10,
-				 	time: 0,
+					time: 0,
+					value: 0,
 				 	animatorType: MotionTween.animatorType.cubicBezier,
 					animatorOptions: {
 						controlPoints: [0, 0.75, 0.25, 1]
 					}
 				},
 				{
-					value: 50,
-				 	time: 1000,
-				 	hold: false,
-				 	animatorType: MotionTween.animatorType.cubicBezier,
-					animatorOptions: {
-						controlPoints: [0.75, 0, 1, 0.25]
-					}
+					time: 1000,
+					value: 50
+				}
+				]
+		});
+
+		const timeline = new InteractiveTimeline("park", {
+			timeRemap: [
+				{
+					time: 250,
+					value: 500
 				},
 				{
-					value: 25,
-					time: 2000
-				}]
-		}
+					time: 500,
+					value: 1000
+				},
+				{
+					time: 750,
+					value: 750
+				}
+			]
+		});
 
-		const tween = new Tween("ball");
+		timeline.addChild(tween);
 
-		tween.addKeyframes(propertyKeyframes);
+		const rootTimeline = new InteractiveTimeline("root");
 
-		const timeline = new InteractiveTimeline("park");
+		rootTimeline.addChild(timeline);
 
-		timeline.addChild(tween, { fillMode: Timeline.FILL_MODE.NONE, loop: false, time: 1000 });
 
 		const sequences = [
 			{
 				time: 0,
-				duration: 5000,
+				duration: 1000,
 				label: "loop",
 				next: "loop"
 			}
 		];
 
-		timeline.setSequences(sequences);
+		rootTimeline.setSequences(sequences);
 
-		this._timeline = timeline;
+		this._timeline = rootTimeline;
 
 		this._build();
 		this._update();
@@ -96,9 +105,11 @@ class Main {
 
 		const state = this._timeline.increment(delta);
 
-		for (let i = 0; i < state.children.length; i++) {
-			if (state.children[i].type === "tween" && state.children[i].name === "ball") {
-				this._drawCircle(state.children[i].properties.radius);
+		const tweens = state.children[0].children;
+
+		for (let i = 0; i < tweens.length; i++) {
+			if (tweens[i].type === "tween" && tweens[i].name === "ball") {
+				this._drawCircle(tweens[i].properties.radius);
 			}
 		}
 	}

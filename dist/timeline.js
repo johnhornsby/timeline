@@ -139,12 +139,14 @@ return /******/ (function(modules) { // webpackBootstrap
 			enumerable: true
 		}]);
 
-		function Timeline(name, options) {
+		function Timeline(name, keyframesObject, options) {
 			_classCallCheck(this, Timeline);
 
-			_get(Object.getPrototypeOf(Timeline.prototype), 'constructor', this).call(this, name);
+			_get(Object.getPrototypeOf(Timeline.prototype), 'constructor', this).call(this, name, keyframesObject, options);
+
 			this._children = [];
 			this._currentTime = 0;
+			this._options = _extends({}, _TIMELINE_DEFAULT_OPTIONS, options);
 		}
 
 		/*________________________________________________________
@@ -167,19 +169,12 @@ return /******/ (function(modules) { // webpackBootstrap
 				this._addChild(child, options);
 			}
 		}, {
-			key: '_init',
+			key: '_addChild',
 
 			/*________________________________________________________
 	  	PRIVATE CLASS METHODS
 	  ________________________________________________________*/
 
-			value: function _init(name, options) {
-				_get(Object.getPrototypeOf(Timeline.prototype), '_init', this).call(this, name);
-
-				this._options = _extends({}, _TIMELINE_DEFAULT_OPTIONS, options);
-			}
-		}, {
-			key: '_addChild',
 			value: function _addChild(child, options) {
 				// clone options into settings property
 				var o = {
@@ -255,9 +250,18 @@ return /******/ (function(modules) { // webpackBootstrap
 				var _this = this;
 
 				var state = new _timelineState2['default'](_timelineState2['default'].TYPE.TIMELINE, this._name);
-				var tweenState = undefined;
+				var tweenState = undefined,
+				    resolvedTime = undefined;
 
-				var resolvedTime = undefined;
+				// Check to see if we have specified the 'timeRemap' property,
+				// if so remap time and then obtain state
+				if (this._propertyKeyframesMap.size > 0) {
+					if (this._propertyKeyframesMap.has("timeRemap")) {
+						var keyframes = this._propertyKeyframesMap.get("timeRemap");
+
+						time = this._getTimeRemapTweenValue(keyframes, time);
+					}
+				}
 
 				this._children.forEach(function (childObjectData, index) {
 
@@ -327,6 +331,85 @@ return /******/ (function(modules) { // webpackBootstrap
 				}
 
 				return childRelativeTime;
+			}
+
+			/**
+	   * Method takes an array of timeRemap Keyframes and time and returns the tweened time at that time
+	   *
+	   * @private
+	   * @param {Array} keyframes Array of keyframe objects with time and value properties.
+	   * @param {Number} time Time in milisecond
+	   * @return Number
+	   */
+		}, {
+			key: '_getTimeRemapTweenValue',
+			value: function _getTimeRemapTweenValue(keyframes, time) {
+				var value = null;
+				// interate over keyframes untill we find the exact value or keyframes either side
+				var length = keyframes.length;
+				var keyframe = undefined,
+				    keyframeValue = undefined;
+				var lastKeyframe = undefined;
+
+				// the aim here is to find the keyframe to either side of the time value
+
+				var previousKeyframe = null;
+				var nextKeyframe = null;
+
+				for (var i = 0; i < length; i++) {
+					keyframe = keyframes[i];
+					keyframeValue = keyframe.value;
+
+					if (time === keyframe.time) {
+						return keyframe.value;
+					} else if (time > keyframe.time) {
+						previousKeyframe = keyframe;
+						// no need to break here as we continue iterating through keyFrames to find the keyframe just previous to the time value
+					} else if (time < keyframe.time) {
+							nextKeyframe = keyframe;
+							break; // break here has we have gone far enough to get the next keyFrame
+						}
+				}
+
+				if (previousKeyframe == null && nextKeyframe == null) {
+					return value;
+				}
+
+				if (previousKeyframe == null) {
+					// when we have no previouskeyframe the natural behaviour differs from standard tween keyframes,
+					// instead of gleening the next keyframe value, we want to determine the time relative to the
+					// time remaped at the nextKeyframe value. Look at the example below
+
+					// nextKeyframe.time = 50
+					// nextKeyframe.value = 25
+					// time = 30
+					// value = nextKeyframe.value - (nextKeyframe.time - time) // ergo 5
+
+					return nextKeyframe.value - (nextKeyframe.time - time);
+				}
+
+				if (nextKeyframe == null) {
+
+					// see above reasoning
+
+					// previousKeyframe.time = 50
+					// previousKeyframe.value = 25
+					// time = 70
+					// value = previousKeyframe.value - (previousKeyframe.time - time) // ergo 45
+
+					return previousKeyframe.value - (previousKeyframe.time - time);
+				}
+
+				if (previousKeyframe != null && nextKeyframe != null) {
+					// check for a hold keyframe
+					if (previousKeyframe.hold != null && previousKeyframe.hold === true) {
+						return previousKeyframe.value;
+					}
+
+					value = this._tweenBetweenKeyframes(previousKeyframe, nextKeyframe, time);
+				}
+
+				return value;
 			}
 		}, {
 			key: '_next',
@@ -492,11 +575,7 @@ return /******/ (function(modules) { // webpackBootstrap
 			this._name = null;
 			this._duration = 0;
 
-			this._init(name);
-
-			if (keyframesObject != null) {
-				this._addKeyframes(keyframesObject);
-			}
+			this._init(name, keyframesObject);
 		}
 
 		/*________________________________________________________
@@ -520,7 +599,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	  	PRIVATE CLASS METHODS
 	  ________________________________________________________*/
 
-			value: function _init(name) {
+			value: function _init(name, keyframesObject) {
 
 				if (name == null) {
 					throw Error("Name not specified");
@@ -529,6 +608,10 @@ return /******/ (function(modules) { // webpackBootstrap
 				this._name = name;
 
 				this._propertyKeyframesMap = new Map();
+
+				if (keyframesObject != null) {
+					this._addKeyframes(keyframesObject);
+				}
 			}
 		}, {
 			key: '_addKeyframes',

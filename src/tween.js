@@ -19,11 +19,7 @@ export default class Tween {
 
 	constructor(name, keyframesObject) {
 
-		this._init(name);
-
-		if (keyframesObject != null) {
-			this._addKeyframes(keyframesObject);
-		}
+		this._init(name, keyframesObject);
 	}
 
 
@@ -56,7 +52,7 @@ export default class Tween {
 	PRIVATE CLASS METHODS
 	________________________________________________________*/
 
-	_init(name) {
+	_init(name, keyframesObject) {
 
 		if (name == null) {
 			throw Error("Name not specified");
@@ -65,6 +61,10 @@ export default class Tween {
 		this._name = name;
 
 		this._propertyKeyframesMap = new Map();
+
+		if (keyframesObject != null) {
+			this._addKeyframes(keyframesObject);
+		}
 	}
 
 
