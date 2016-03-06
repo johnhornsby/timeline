@@ -119,10 +119,10 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	var _CHILD_DEFAULT_OPTIONS = {
 		fillMode: "both",
-		'in': 0,
+		'in': null,
 		loop: false,
 		out: null,
-		time: 0
+		time: null
 	};
 
 	var Timeline = (function (_Tween) {
@@ -131,7 +131,7 @@ return /******/ (function(modules) { // webpackBootstrap
 		_createClass(Timeline, null, [{
 			key: 'FILL_MODE',
 			value: {
-				NOME: "none",
+				NONE: "none",
 				FORWARD: "forward",
 				BACKWARD: "backward",
 				BOTH: "both"
@@ -187,16 +187,52 @@ return /******/ (function(modules) { // webpackBootstrap
 					settings: _extends({}, _CHILD_DEFAULT_OPTIONS, options)
 				};
 
+				// set time property if not already set
+				if (o.settings.time == null) {
+					o.settings.time = 0;
+				}
+
+				// set in property if not already set
+				if (o.settings['in'] == null) {
+					o.settings['in'] = o.settings.time;
+				}
+
 				// set out property if not already set
 				if (o.settings.out == null) {
 					o.settings.out = o.settings.time + child.duration;
 				}
+
+				this._validateChildOptions(o.settings);
 
 				this._children.push(o);
 
 				var absoluteDuration = this._getChildrenDuration();
 
 				this._duration = absoluteDuration;
+			}
+		}, {
+			key: '_validateChildOptions',
+			value: function _validateChildOptions(settings) {
+
+				var fillModes = Object.keys(Timeline.FILL_MODE).map(function (key) {
+					return Timeline.FILL_MODE[key];
+				});
+
+				if (fillModes.indexOf(settings.fillMode) === -1) {
+					throw Error("Incorrectly set fillMode: " + settings.fillMode);
+				}
+
+				if (settings['in'] < settings.time) {
+					throw Error("The 'in' option can't preceed the 'time' option");
+				}
+
+				if (settings['in'] > settings.out) {
+					throw Error("The 'in' option can't be after the 'out' option");
+				}
+
+				if (settings.out < settings.time || settings.out < settings['in']) {
+					throw Error("The 'out' option can't preceed the 'time' or 'in' option");
+				}
 			}
 		}, {
 			key: '_removeChild',
@@ -448,7 +484,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	var _timelineAbstract2 = _interopRequireDefault(_timelineAbstract);
 
 	var Tween = (function () {
-		function Tween(name) {
+		function Tween(name, keyframesObject) {
 			_classCallCheck(this, Tween);
 
 			this._propertyKeyframesMap = null;
@@ -457,6 +493,10 @@ return /******/ (function(modules) { // webpackBootstrap
 			this._duration = 0;
 
 			this._init(name);
+
+			if (keyframesObject != null) {
+				this._addKeyframes(keyframesObject);
+			}
 		}
 
 		/*________________________________________________________

@@ -17,9 +17,13 @@ export default class Tween {
 	_duration = 0;
 
 
-	constructor(name) {
+	constructor(name, keyframesObject) {
 
 		this._init(name);
+
+		if (keyframesObject != null) {
+			this._addKeyframes(keyframesObject);
+		}
 	}
 
 

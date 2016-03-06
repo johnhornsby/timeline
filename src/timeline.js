@@ -7,17 +7,17 @@ const _TIMELINE_DEFAULT_OPTIONS = {
 
 const _CHILD_DEFAULT_OPTIONS = {
 	fillMode: "both",
-	in: 0,
+	in: null,
 	loop: false,
 	out: null,
-	time: 0
+	time: null
 }
 
 
 export default class Timeline extends Tween {
 
 	static FILL_MODE = {
-		NOME: "none",
+		NONE: "none",
 		FORWARD: "forward",
 		BACKWARD: "backward",
 		BOTH: "both"
@@ -84,16 +84,51 @@ export default class Timeline extends Tween {
 			}
 		}
 
+		// set time property if not already set
+		if (o.settings.time == null) {
+			o.settings.time = 0;
+		}
+
+		// set in property if not already set
+		if (o.settings.in == null) {
+			o.settings.in = o.settings.time;
+		}
+
+
 		// set out property if not already set
 		if (o.settings.out == null) {
 			o.settings.out = o.settings.time + child.duration;
 		}
+
+		this._validateChildOptions(o.settings);
 
 		this._children.push(o);
 
 		const absoluteDuration = this._getChildrenDuration();
 
 		this._duration = absoluteDuration;
+	}
+
+
+	_validateChildOptions(settings) {
+
+		const fillModes = Object.keys(Timeline.FILL_MODE).map( (key) => Timeline.FILL_MODE[key]);
+
+		if (fillModes.indexOf(settings.fillMode) === -1) {
+			throw Error("Incorrectly set fillMode: " + settings.fillMode);
+		}
+
+		if (settings.in < settings.time) {
+			throw Error("The 'in' option can't preceed the 'time' option");
+		}
+
+		if (settings.in > settings.out) {
+			throw Error("The 'in' option can't be after the 'out' option");
+		}
+
+		if (settings.out < settings.time || settings.out < settings.in) {
+			throw Error("The 'out' option can't preceed the 'time' or 'in' option");
+		}
 	}
 
 

@@ -7429,7 +7429,7 @@
 			value: function _init() {
 				var propertyKeyframes = {
 					radius: [{
-						value: 0,
+						value: 10,
 						time: 0,
 						animatorType: _distTimeline.MotionTween.animatorType.cubicBezier,
 						animatorOptions: {
@@ -7444,7 +7444,7 @@
 							controlPoints: [0.75, 0, 1, 0.25]
 						}
 					}, {
-						value: 0,
+						value: 25,
 						time: 2000
 					}]
 				};
@@ -7455,7 +7455,7 @@
 
 				var timeline = new _distTimeline.InteractiveTimeline("park");
 
-				timeline.addChild(tween, { fillMode: "both", "in": 0, loop: false, time: 0 });
+				timeline.addChild(tween, { fillMode: _distTimeline.Timeline.FILL_MODE.NONE, loop: false, time: 1000 });
 
 				var sequences = [{
 					time: 0,
@@ -7690,10 +7690,10 @@
 
 				var _CHILD_DEFAULT_OPTIONS = {
 					fillMode: "both",
-					'in': 0,
+					'in': null,
 					loop: false,
 					out: null,
-					time: 0
+					time: null
 				};
 
 				var Timeline = (function (_Tween) {
@@ -7707,8 +7707,6 @@
 							BACKWARD: "backward",
 							BOTH: "both"
 						},
-
-						// An Array of Objects {tween, time}
 						enumerable: true
 					}]);
 
@@ -7757,21 +7755,55 @@
 							// clone options into settings property
 							var o = {
 								child: child,
-								settings: _extends({}, options)
+								settings: _extends({}, _CHILD_DEFAULT_OPTIONS, options)
 							};
 
-							// set out property if not already set
-							if (options.out == null) {
-								o.settings.out = options.time + child.duration;
+							// set time property if not already set
+							if (o.settings.time == null) {
+								o.settings.time = 0;
 							}
+
+							// set in property if not already set
+							if (o.settings['in'] == null) {
+								o.settings['in'] = o.settings.time;
+							}
+
+							// set out property if not already set
+							if (o.settings.out == null) {
+								o.settings.out = o.settings.time + child.duration;
+							}
+
+							this._validateChildOptions(o.settings);
 
 							this._children.push(o);
 
 							var absoluteDuration = this._getChildrenDuration();
 
 							this._duration = absoluteDuration;
+						}
+					}, {
+						key: '_validateChildOptions',
+						value: function _validateChildOptions(settings) {
 
-							// this._updateRelativeDuration(absoluteDuration);
+							var fillModes = Object.keys(Timeline.FILL_MODE).map(function (key) {
+								return Timeline.FILL_MODE[key];
+							});
+
+							if (fillModes.indexOf(settings.fillMode) === -1) {
+								throw Error("Incorrectly set fillMode: " + settings.fillMode);
+							}
+
+							if (settings['in'] < settings.time) {
+								throw Error("The 'in' option can't preceed the 'time' option");
+							}
+
+							if (settings['in'] > settings.out) {
+								throw Error("The 'in' option can't be after the 'out' option");
+							}
+
+							if (settings.out < settings.time || settings.out < settings['in']) {
+								throw Error("The 'out' option can't preceed the 'time' or 'in' option");
+							}
 						}
 					}, {
 						key: '_removeChild',
@@ -7805,19 +7837,9 @@
 
 								tweenState = childObjectData.child.getState(resolvedTime);
 
-								// @TODO the only thing we need to do is to clip state to in and out unless fill permits
-								if (time < childObjectData.settings['in'] || time > childObjectData.settings.out) {
-									tweenState = _this._clipState(tweenState);
-								}
-
 								state.addChild(tweenState);
 							});
 
-							return state;
-						}
-					}, {
-						key: '_clipState',
-						value: function _clipState(state) {
 							return state;
 						}
 
@@ -7847,7 +7869,6 @@
 					}, {
 						key: '_resolveChildRelativeTime',
 						value: function _resolveChildRelativeTime(time, childSettings) {
-
 							// now we have the beginning position of the child we can determine the time relative to the child
 							var childRelativeTime = time - childSettings.time;
 
@@ -7875,29 +7896,6 @@
 									return undefined;
 								}
 							}
-
-							// time = 200
-							// settings.in = 100
-							// settings.time = 150
-
-							// settings.time - settings.in = -50
-							// childRelativeTime = time - -50 = 250
-
-							// if (time < this._options.in) {
-							// 	if (this._options.fillMode === TimelineAbstract.FILL_MODE.BACKWARD || this._options.fillMode === TimelineAbstract.FILL_MODE.BOTH) {
-							// 		if (this._options.loop) {
-							// 			return this._loopTime(time);
-							// 		}
-							// 	}
-							// }
-
-							// if (time > this._options.out) {
-							// 	if (this._options.fillMode === TimelineAbstract.FILL_MODE.FORWARD || this._options.fillMode === TimelineAbstract.FILL_MODE.BOTH) {
-							// 		if (this._options.loop) {
-							// 			return this._loopTime(time);
-							// 		}
-							// 	}
-							// }
 
 							return childRelativeTime;
 						}
@@ -8093,15 +8091,19 @@
 				var _timelineAbstract2 = _interopRequireDefault(_timelineAbstract);
 
 				var Tween = (function () {
-					function Tween(name) {
+					function Tween(name, keyframesObject) {
 						_classCallCheck(this, Tween);
 
 						this._propertyKeyframesMap = null;
 						this._options = null;
 						this._name = null;
-						this._duration = null;
+						this._duration = 0;
 
 						this._init(name);
+
+						if (keyframesObject != null) {
+							this._addKeyframes(keyframesObject);
+						}
 					}
 
 					/*________________________________________________________
@@ -8127,13 +8129,14 @@
 
 						value: function _init(name) {
 
+							if (name == null) {
+								throw Error("Name not specified");
+							}
+
 							this._name = name;
 
 							this._propertyKeyframesMap = new Map();
 						}
-
-						// _validateOptions(options) {}
-
 					}, {
 						key: '_addKeyframes',
 						value: function _addKeyframes(keyframesObject) {
@@ -8149,79 +8152,7 @@
 							});
 
 							this._duration = this._getKeyframesDuration();
-
-							// this._updateRelativeDuration(absoluteDuration);
 						}
-
-						// /**
-						//  * Method iterates through keyframes for each property and determines our relative duration between in and out
-						//  *
-						//  * @private
-						//  */
-						// _updateRelativeDuration(absoluteDuration) {
-						// 	let inIndex = -1;
-						// 	let duration = absoluteDuration;
-
-						// 	if (this._options.in == null) {
-						// 		this._options.in = 0;
-						// 	} else {
-						// 		// adjust the duration
-						// 		if (this._options.in > duration) {
-						// 			throw Error("In point is set beyond the end of the tween!");
-						// 		}
-						// 		duration -= this._options.in;
-						// 	}
-
-						// 	if (this._options.out != null) {
-						// 		duration = this._options.out - this._options.in;
-						// 	} else {
-						// 		this._options.out = this._options.in + duration;
-						// 	}
-
-						// 	this._duration = duration;
-
-						// 	if (this._options.in > this._options.out) {
-						// 		throw Error("tween in is greater than out!");
-						// 	}
-						// }
-
-						// /**
-						//  * Method takes any time and wraps it accordingly to be within in and out points
-						//  *
-						//  * @private
-						//  * @param {Number} time Time in milisecond
-						//  * @return Number
-						//  */
-						// _loopTime(time) {
-						// 	return (((time - this._options.in) % this._duration) + this._duration) % this._duration;
-						// }
-
-						// /**
-						//  * Method takes any time and checks whether the time value requires wrapping, if so then returns wrapped time
-						//  *
-						//  * @private
-						//  * @param {Number} time Time in milisecond
-						//  * @return Number
-						//  */
-						// _resolveTime(time) {
-						// 	if (time < this._options.in) {
-						// 		if (this._options.fillMode === TimelineAbstract.FILL_MODE.BACKWARD || this._options.fillMode === TimelineAbstract.FILL_MODE.BOTH) {
-						// 			if (this._options.loop) {
-						// 				return this._loopTime(time);
-						// 			}
-						// 		}
-						// 	}
-
-						// 	if (time > this._options.out) {
-						// 		if (this._options.fillMode === TimelineAbstract.FILL_MODE.FORWARD || this._options.fillMode === TimelineAbstract.FILL_MODE.BOTH) {
-						// 			if (this._options.loop) {
-						// 				return this._loopTime(time);
-						// 			}
-						// 		}
-						// 	}
-
-						// 	return time;
-						// }
 
 						/**
 	      * Method clones the array of keyframes
@@ -8266,8 +8197,6 @@
 							var _this2 = this;
 
 							var state = new _timelineState2['default'](_timelineState2['default'].TYPE.TWEEN, this._name);
-
-							// time = this._resolveTime(time);
 
 							this._propertyKeyframesMap.forEach(function (keyframes, property) {
 
@@ -8320,18 +8249,10 @@
 							}
 
 							if (previousKeyframe == null) {
-								// if (time < this._options.in && (this._options.fillMode !== TimelineAbstract.FILL_MODE.BACKWARD && this._options.fillMode !== TimelineAbstract.FILL_MODE.BOTH)) {
-								// 	return value;
-								// }
-
 								return nextKeyframe.value;
 							}
 
 							if (nextKeyframe == null) {
-								// if (time > this._options.out && (this._options.fillMode !== TimelineAbstract.FILL_MODE.FORWARD && this._options.fillMode !== TimelineAbstract.FILL_MODE.BOTH)) {
-								// 	return value;
-								// }
-
 								return previousKeyframe.value;
 							}
 

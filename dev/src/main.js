@@ -20,7 +20,7 @@ class Main {
 		const propertyKeyframes = {
 			radius: [
 				{
-					value: 0,
+					value: 10,
 				 	time: 0,
 				 	animatorType: MotionTween.animatorType.cubicBezier,
 					animatorOptions: {
@@ -37,7 +37,7 @@ class Main {
 					}
 				},
 				{
-					value: 0,
+					value: 25,
 					time: 2000
 				}]
 		}
@@ -48,7 +48,7 @@ class Main {
 
 		const timeline = new InteractiveTimeline("park");
 
-		timeline.addChild(tween, { fillMode: "both", in: 0, loop: false, time: 0 });
+		timeline.addChild(tween, { fillMode: Timeline.FILL_MODE.NONE, loop: false, time: 1000 });
 
 		const sequences = [
 			{
