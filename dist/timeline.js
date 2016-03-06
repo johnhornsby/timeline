@@ -201,14 +201,15 @@ return /******/ (function(modules) { // webpackBootstrap
 
 				this._children.push(o);
 
-				var absoluteDuration = this._getChildrenDuration();
+				var childDuration = this._getChildrenDuration();
 
-				this._duration = absoluteDuration;
+				var localDuration = this._getKeyframesDuration();
+
+				this._duration = Math.max(childDuration, localDuration);
 			}
 		}, {
 			key: '_validateChildOptions',
 			value: function _validateChildOptions(settings) {
-
 				var fillModes = Object.keys(Timeline.FILL_MODE).map(function (key) {
 					return Timeline.FILL_MODE[key];
 				});

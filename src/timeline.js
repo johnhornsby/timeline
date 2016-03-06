@@ -98,14 +98,15 @@ export default class Timeline extends Tween {
 
 		this._children.push(o);
 
-		const absoluteDuration = this._getChildrenDuration();
+		const childDuration = this._getChildrenDuration();
 
-		this._duration = absoluteDuration;
+		const localDuration = this._getKeyframesDuration()
+
+		this._duration = Math.max(childDuration, localDuration);
 	}
 
 
 	_validateChildOptions(settings) {
-
 		const fillModes = Object.keys(Timeline.FILL_MODE).map( (key) => Timeline.FILL_MODE[key]);
 
 		if (fillModes.indexOf(settings.fillMode) === -1) {

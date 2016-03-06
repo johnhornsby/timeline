@@ -46,7 +46,7 @@ class Main {
 					value: 1000
 				},
 				{
-					time: 750,
+					time: 5000,
 					value: 750
 				}
 			]
@@ -62,7 +62,7 @@ class Main {
 		const sequences = [
 			{
 				time: 0,
-				duration: 1000,
+				duration: 5000,
 				label: "loop",
 				next: "loop"
 			}
