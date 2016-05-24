@@ -1,6 +1,6 @@
 // import MotionTween from 'motion-tween';
 var MotionTween = require('motion-tween');
-import Tween from '../tween';
+var Tween = require('../tween');
 
 describe('_init', () => {
 	it('instantiates a tween instance', () => {
