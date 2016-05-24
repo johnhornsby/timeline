@@ -155,6 +155,10 @@ export default class Timeline extends Tween {
 			if (this._propertyKeyframesMap.has("timeRemap")) {
 				const keyframes = this._propertyKeyframesMap.get("timeRemap");
 
+				// @TODO if time comes in here undefined then it is resolved to null,
+				// where we usually expect an undefined to deliver us a null state property value
+				// resolved time is returning as 0, and therefore we are not getting the correct state
+
 				time = this._getTimeRemapTweenValue(keyframes, time);
 			}
 		}
