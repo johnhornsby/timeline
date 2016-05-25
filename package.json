@@ -20,7 +20,7 @@
     "unmockedModulePathPatterns": [
       "<rootDir>/src/timeline",
       "<rootDir>/src/tween",
-      "<rootDir>/node_modules/motion-tween/lib/MotionTween"
+      "<rootDir>/node_modules/motion-tween/dist/motion-tween"
     ]
   },
   "devDependencies": {
@@ -35,7 +35,7 @@
   },
   "dependencies": {
     "babel-polyfill": "^6.3.14",
-    "motion-tween": "git+https://github.com/johnhornsby/motion-tween.git#9c96ca6",
+    "motion-tween": "git+https://github.com/johnhornsby/motion-tween.git#3bf3172",
     "wolfy87-eventemitter": "^4.2.11"
   }
 }
