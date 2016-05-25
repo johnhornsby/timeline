@@ -1,5 +1,4 @@
-
-var Timeline = require('../timeline');
+import Timeline from '../timeline';
 
 describe('_loopTime', () => {
 

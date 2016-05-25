@@ -1640,7 +1640,7 @@
 	  debug = __webpack_require__(20)('sockjs-client:websocket');
 	}
 
-	function WebSocketTransport(transUrl) {
+	function WebSocketTransport(transUrl, ignore, options) {
 	  if (!WebSocketTransport.enabled()) {
 	    throw new Error('Transport created when disabled');
 	  }
@@ -1657,7 +1657,7 @@
 	  }
 	  this.url = url;
 
-	  this.ws = new WebsocketDriver(this.url);
+	  this.ws = new WebsocketDriver(this.url, [], options);
 	  this.ws.onmessage = function(e) {
 	    debug('message event', e.data);
 	    self.emit('message', e.data);
@@ -1740,6 +1740,9 @@
 	var queueIndex = -1;
 
 	function cleanUpNextTick() {
+	    if (!draining || !currentQueue) {
+	        return;
+	    }
 	    draining = false;
 	    if (currentQueue.length) {
 	        queue = currentQueue.concat(queue);
@@ -2026,7 +2029,8 @@
 	var required = __webpack_require__(17)
 	  , lolcation = __webpack_require__(18)
 	  , qs = __webpack_require__(19)
-	  , relativere = /^\/(?!\/)/;
+	  , relativere = /^\/(?!\/)/
+	  , protocolre = /^([a-z0-9.+-]+:)?(\/\/)?(.*)$/i; // actual protocol is first match
 
 	/**
 	 * These are the parse instructions for the URL parsers, it informs the parser
@@ -2043,13 +2047,36 @@
 	var instructions = [
 	  ['#', 'hash'],                        // Extract from the back.
 	  ['?', 'query'],                       // Extract from the back.
-	  ['//', 'protocol', 2, 1, 1],          // Extract from the front.
 	  ['/', 'pathname'],                    // Extract from the back.
 	  ['@', 'auth', 1],                     // Extract from the front.
 	  [NaN, 'host', undefined, 1, 1],       // Set left over value.
 	  [/\:(\d+)$/, 'port'],                 // RegExp the back.
 	  [NaN, 'hostname', undefined, 1, 1]    // Set left over.
 	];
+
+	 /**
+	 * @typedef ProtocolExtract
+	 * @type Object
+	 * @property {String} protocol Protocol matched in the URL, in lowercase
+	 * @property {Boolean} slashes Indicates whether the protocol is followed by double slash ("//")
+	 * @property {String} rest     Rest of the URL that is not part of the protocol
+	 */
+
+	 /**
+	  * Extract protocol information from a URL with/without double slash ("//")
+	  *
+	  * @param  {String} address   URL we want to extract from.
+	  * @return {ProtocolExtract}  Extracted information
+	  * @private
+	  */
+	function extractProtocol(address) {
+	  var match = protocolre.exec(address);
+	  return {
+	    protocol: match[1] ? match[1].toLowerCase() : '',
+	    slashes: !!match[2],
+	    rest: match[3] ? match[3] : ''
+	  };
+	}
 
 	/**
 	 * The actual URL instance. Instead of returning an object we've opted-in to
@@ -2058,8 +2085,8 @@
 	 *
 	 * @constructor
 	 * @param {String} address URL we want to parse.
-	 * @param {Boolean|function} parser Parser for the query string.
-	 * @param {Object} location Location defaults for relative paths.
+	 * @param {Object|String} location Location defaults for relative paths.
+	 * @param {Boolean|Function} parser Parser for the query string.
 	 * @api public
 	 */
 	function URL(address, location, parser) {
@@ -2094,6 +2121,12 @@
 	  }
 
 	  location = lolcation(location);
+
+	  // extract protocol information before running the instructions
+	  var extracted = extractProtocol(address);
+	  url.protocol = extracted.protocol || location.protocol || '';
+	  url.slashes = extracted.slashes || location.slashes;
+	  address = extracted.rest;
 
 	  for (; i < instructions.length; i++) {
 	    instruction = instructions[i];
@@ -2165,8 +2198,12 @@
 	 * This is convenience method for changing properties in the URL instance to
 	 * insure that they all propagate correctly.
 	 *
-	 * @param {String} prop Property we need to adjust.
-	 * @param {Mixed} value The newly assigned value.
+	 * @param {String} prop          Property we need to adjust.
+	 * @param {Mixed} value          The newly assigned value.
+	 * @param {Boolean|Function} fn  When setting the query, it will be the function used to parse
+	 *                               the query.
+	 *                               When setting the protocol, double slash will be removed from
+	 *                               the final url if it is true.
 	 * @returns {URL}
 	 * @api public
 	 */
@@ -2201,6 +2238,9 @@
 	      url.hostname = value[0];
 	      url.port = value[1];
 	    }
+	  } else if ('protocol' === part) {
+	    url.protocol = value;
+	    url.slashes = !fn;
 	  } else {
 	    url[part] = value;
 	  }
@@ -2221,7 +2261,11 @@
 
 	  var query
 	    , url = this
-	    , result = url.protocol +'//';
+	    , protocol = url.protocol;
+
+	  if (protocol && protocol.charAt(protocol.length - 1) !== ':') protocol += ':';
+
+	  var result = protocol + (url.slashes ? '//' : '');
 
 	  if (url.username) {
 	    result += url.username;
@@ -2301,9 +2345,11 @@
 
 	/* WEBPACK VAR INJECTION */(function(global) {'use strict';
 
+	var slashes = /^[A-Za-z][A-Za-z0-9+-.]*:\/\//;
+
 	/**
 	 * These properties should not be copied or inherited from. This is only needed
-	 * for all non blob URL's as the a blob URL does not include a hash, only the
+	 * for all non blob URL's as a blob URL does not include a hash, only the
 	 * origin.
 	 *
 	 * @type {Object}
@@ -2320,7 +2366,7 @@
 	 * encoded in the `pathname` so we can thankfully generate a good "default"
 	 * location from it so we can generate proper relative URL's again.
 	 *
-	 * @param {Object} loc Optional default location object.
+	 * @param {Object|String} loc Optional default location object.
 	 * @returns {Object} lolcation object.
 	 * @api public
 	 */
@@ -2337,9 +2383,15 @@
 	  } else if ('string' === type) {
 	    finaldestination = new URL(loc, {});
 	    for (key in ignore) delete finaldestination[key];
-	  } else if ('object' === type) for (key in loc) {
-	    if (key in ignore) continue;
-	    finaldestination[key] = loc[key];
+	  } else if ('object' === type) {
+	    for (key in loc) {
+	      if (key in ignore) continue;
+	      finaldestination[key] = loc[key];
+	    }
+
+	    if (finaldestination.slashes === undefined) {
+	      finaldestination.slashes = slashes.test(loc.href);
+	    }
 	  }
 
 	  return finaldestination;
@@ -2991,12 +3043,18 @@
 	  this.on(type, g);
 	};
 
-	EventEmitter.prototype.emit = function(type) {
+	EventEmitter.prototype.emit = function() {
+	  var type = arguments[0];
 	  var listeners = this._listeners[type];
 	  if (!listeners) {
 	    return;
 	  }
-	  var args = Array.prototype.slice.call(arguments, 1);
+	  // equivalent of Array.prototype.slice.call(arguments, 1);
+	  var l = arguments.length;
+	  var args = new Array(l - 1);
+	  for (var ai = 1; ai < l; ai++) {
+	    args[ai - 1] = arguments[ai];
+	  }
 	  for (var i = 0; i < listeners.length; i++) {
 	    listeners[i].apply(this, args);
 	  }
@@ -3052,9 +3110,11 @@
 	  }
 	};
 
-	EventTarget.prototype.dispatchEvent = function(event) {
+	EventTarget.prototype.dispatchEvent = function() {
+	  var event = arguments[0];
 	  var t = event.type;
-	  var args = Array.prototype.slice.call(arguments, 0);
+	  // equivalent of Array.prototype.slice.call(arguments, 0);
+	  var args = arguments.length === 1 ? [event] : Array.apply(null, arguments);
 	  // TODO: This doesn't match the real behavior; per spec, onfoo get
 	  // their place in line from the /first/ time they're set from
 	  // non-null. Although WebKit bumps it to the end every time it's
@@ -3078,7 +3138,14 @@
 /* 26 */
 /***/ function(module, exports) {
 
-	/* WEBPACK VAR INJECTION */(function(global) {module.exports = global.WebSocket || global.MozWebSocket;
+	/* WEBPACK VAR INJECTION */(function(global) {'use strict';
+
+	var Driver = global.WebSocket || global.MozWebSocket;
+	if (Driver) {
+		module.exports = function WebSocketBrowserDriver(url) {
+			return new Driver(url);
+		};
+	}
 
 	/* WEBPACK VAR INJECTION */}.call(exports, (function() { return this; }())))
 
@@ -3151,7 +3218,7 @@
 	    debug('create ajax sender', url, payload);
 	    var opt = {};
 	    if (typeof payload === 'string') {
-	      opt.headers = {'Content-type':'text/plain'};
+	      opt.headers = {'Content-type': 'text/plain'};
 	    }
 	    var ajaxUrl = urlUtils.addPath(url, '/xhr_send');
 	    var xo = new AjaxObject('POST', ajaxUrl, payload, opt);
@@ -3529,7 +3596,9 @@
 
 	  try {
 	    this.xhr = new XHR();
-	  } catch (x) {}
+	  } catch (x) {
+	    // intentionally empty
+	  }
 
 	  if (!this.xhr) {
 	    debug('no xhr');
@@ -3590,7 +3659,9 @@
 	        try {
 	          status = x.status;
 	          text = x.responseText;
-	        } catch (e) {}
+	        } catch (e) {
+	          // intentionally empty
+	        }
 	        debug('status', status);
 	        // IE returns 1223 for 204: http://bugs.jquery.com/ticket/1450
 	        if (status === 1223) {
@@ -3649,7 +3720,9 @@
 	  if (abort) {
 	    try {
 	      this.xhr.abort();
-	    } catch (x) {}
+	    } catch (x) {
+	      // intentionally empty
+	    }
 	  }
 	  this.unloadRef = this.xhr = null;
 	};
@@ -3678,7 +3751,9 @@
 	var cors = false;
 	try {
 	  cors = 'withCredentials' in new XHR();
-	} catch (ignored) {}
+	} catch (ignored) {
+	  // intentionally empty
+	}
 
 	AbstractXHRObject.supportsCORS = cors;
 
@@ -3872,7 +3947,9 @@
 	  if (abort) {
 	    try {
 	      this.xdr.abort();
-	    } catch (x) {}
+	    } catch (x) {
+	      // intentionally empty
+	    }
 	  }
 	  this.unloadRef = this.xdr = null;
 	};
@@ -4106,7 +4183,9 @@
 	      // When the iframe is not loaded, IE raises an exception
 	      // on 'contentWindow'.
 	      this.postMessage('c');
-	    } catch (x) {}
+	    } catch (x) {
+	      // intentionally empty
+	    }
 	    this.iframeObj.cleanup();
 	    this.iframeObj = null;
 	    this.onmessageCallback = this.iframeObj = null;
@@ -5107,7 +5186,8 @@
 /* 46 */
 /***/ function(module, exports) {
 
-	module.exports = '1.0.3';
+	module.exports = '1.1.1';
+
 
 /***/ },
 /* 47 */
@@ -5156,7 +5236,9 @@
 	      // Explorer had problems with that.
 	      try {
 	        iframe.onload = null;
-	      } catch (x) {}
+	      } catch (x) {
+	        // intentionally empty
+	      }
 	      iframe.onerror = null;
 	    };
 	    var cleanup = function() {
@@ -5192,7 +5274,9 @@
 	            iframe.contentWindow.postMessage(msg, origin);
 	          }
 	        }, 0);
-	      } catch (x) {}
+	      } catch (x) {
+	        // intentionally empty
+	      }
 	    };
 
 	    iframe.src = iframeUrl;
@@ -5242,7 +5326,7 @@
 	        CollectGarbage();
 	      }
 	    };
-	    var onerror = function(r)  {
+	    var onerror = function(r) {
 	      debug('onerror', r);
 	      if (doc) {
 	        cleanup();
@@ -5258,7 +5342,9 @@
 	              iframe.contentWindow.postMessage(msg, origin);
 	          }
 	        }, 0);
-	      } catch (x) {}
+	      } catch (x) {
+	        // intentionally empty
+	      }
 	    };
 
 	    doc.open();
@@ -5441,7 +5527,9 @@
 	if (axo in global) {
 	  try {
 	    HtmlfileReceiver.htmlfileEnabled = !!new global[axo]('htmlfile');
-	  } catch (x) {}
+	  } catch (x) {
+	    // intentionally empty
+	  }
 	}
 
 	HtmlfileReceiver.enabled = HtmlfileReceiver.htmlfileEnabled || iframeUtils.iframeEnabled;
@@ -5695,7 +5783,9 @@
 	        try {
 	          // In IE, actually execute the script.
 	          script.onclick();
-	        } catch (x) {}
+	        } catch (x) {
+	          // intentionally empty
+	        }
 	      }
 	      if (script) {
 	        self._abort(new Error('JSONP script loaded abnormally (onreadystatechange)'));
@@ -5721,7 +5811,9 @@
 	      try {
 	        script.htmlFor = script.id;
 	        script.event = 'onclick';
-	      } catch (x) {}
+	      } catch (x) {
+	        // intentionally empty
+	      }
 	      script.async = true;
 	    } else {
 	      // Opera, second sync script hack
@@ -5880,9 +5972,7 @@
 
 	var debug = function() {};
 	if (process.env.NODE_ENV !== 'production') {
-	  // Make debug module available globally so you can enable via the console easily
-	  global.dbg = __webpack_require__(20);
-	  debug = global.dbg('sockjs-client:main');
+	  debug = __webpack_require__(20)('sockjs-client:main');
 	}
 
 	var transports;
@@ -5907,6 +5997,7 @@
 	    log.warn("'protocols_whitelist' is DEPRECATED. Use 'transports' instead.");
 	  }
 	  this._transportsWhitelist = options.transports;
+	  this._transportOptions = options.transportOptions || {};
 
 	  var sessionId = options.sessionId || 8;
 	  if (typeof sessionId === 'function') {
@@ -5916,7 +6007,7 @@
 	      return random.string(sessionId);
 	    };
 	  } else {
-	    throw new TypeError("If sessionId is used in the options, it needs to be a number or a function.");
+	    throw new TypeError('If sessionId is used in the options, it needs to be a number or a function.');
 	  }
 
 	  this._server = options.server || random.numberString(1000);
@@ -6072,8 +6163,9 @@
 	    debug('using timeout', timeoutMs);
 
 	    var transportUrl = urlUtils.addPath(this._transUrl, '/' + this._server + '/' + this._generateSessionId());
+	    var options = this._transportOptions[Transport.transportName];
 	    debug('transport url', transportUrl);
-	    var transportObj = new Transport(transportUrl, this._transUrl);
+	    var transportObj = new Transport(transportUrl, this._transUrl, options);
 	    transportObj.on('message', this._transportMessage.bind(this));
 	    transportObj.once('close', this._transportClose.bind(this));
 	    transportObj.transportName = Transport.transportName;
@@ -6838,7 +6930,14 @@
 
 	var logObject = {};
 	['log', 'debug', 'warn'].forEach(function (level) {
-	  var levelExists = global.console && global.console[level] && global.console[level].apply;
+	  var levelExists;
+
+	  try {
+	    levelExists = global.console && global.console[level] && global.console[level].apply;
+	  } catch(e) {
+	    // do nothing
+	  }
+
 	  logObject[level] = levelExists ? function () {
 	    return global.console[level].apply(global.console, arguments);
 	  } : (level === 'log' ? function () {} : logObject.log);
@@ -6867,11 +6966,11 @@
 	};
 
 	Event.prototype.stopPropagation = function() {};
-	Event.prototype.preventDefault  = function() {};
+	Event.prototype.preventDefault = function() {};
 
 	Event.CAPTURING_PHASE = 1;
-	Event.AT_TARGET       = 2;
-	Event.BUBBLING_PHASE  = 3;
+	Event.AT_TARGET = 2;
+	Event.BUBBLING_PHASE = 3;
 
 	module.exports = Event;
 
@@ -7310,7 +7409,7 @@
 	        debug(version, transport, transUrl, baseUrl);
 	        // change this to semver logic
 	        if (version !== SockJS.version) {
-	          throw new Error('Incompatibile SockJS! Main site uses:' +
+	          throw new Error('Incompatible SockJS! Main site uses:' +
 	                    ' "' + version + '", the iframe:' +
 	                    ' "' + SockJS.version + '".');
 	        }
@@ -7404,13 +7503,13 @@
 
 	"use strict";
 
-	var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
+	var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+	var _timeline = __webpack_require__(75);
 
 	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-	var _distTimeline = __webpack_require__(75);
-
-	var Main = (function () {
+	var Main = function () {
 		function Main() {
 			_classCallCheck(this, Main);
 
@@ -7428,11 +7527,11 @@
 			key: "_init",
 			value: function _init() {
 
-				var tween = new _distTimeline.Tween("ball", {
+				var tween = new _timeline.Tween("ball", {
 					radius: [{
 						time: 0,
 						value: 0,
-						animatorType: _distTimeline.MotionTween.animatorType.cubicBezier,
+						animatorType: _timeline.MotionTween.animatorType.cubicBezier,
 						animatorOptions: {
 							controlPoints: [0, 0.75, 0.25, 1]
 						}
@@ -7442,7 +7541,7 @@
 					}]
 				});
 
-				var timeline = new _distTimeline.InteractiveTimeline("park", {
+				var timeline = new _timeline.InteractiveTimeline("park", {
 					timeRemap: [{
 						time: 250,
 						value: 500
@@ -7457,7 +7556,7 @@
 
 				timeline.addChild(tween);
 
-				var rootTimeline = new _distTimeline.InteractiveTimeline("root");
+				var rootTimeline = new _timeline.InteractiveTimeline("root");
 
 				rootTimeline.addChild(timeline);
 
@@ -7523,7 +7622,7 @@
 		}]);
 
 		return Main;
-	})();
+	}();
 
 	new Main();
 
@@ -7531,12 +7630,14 @@
 /* 75 */
 /***/ function(module, exports, __webpack_require__) {
 
-	'use strict';
+	var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/* WEBPACK VAR INJECTION */(function(module) {'use strict';
+
+	var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol ? "symbol" : typeof obj; };
 
 	(function webpackUniversalModuleDefinition(root, factory) {
-		if (true) module.exports = factory();else if (typeof define === 'function' && define.amd) define([], factory);else if (typeof exports === 'object') exports["Timeline"] = factory();else root["Timeline"] = factory();
+		if (( false ? 'undefined' : _typeof(exports)) === 'object' && ( false ? 'undefined' : _typeof(module)) === 'object') module.exports = factory();else if (true) !(__WEBPACK_AMD_DEFINE_ARRAY__ = [], __WEBPACK_AMD_DEFINE_FACTORY__ = (factory), __WEBPACK_AMD_DEFINE_RESULT__ = (typeof __WEBPACK_AMD_DEFINE_FACTORY__ === 'function' ? (__WEBPACK_AMD_DEFINE_FACTORY__.apply(exports, __WEBPACK_AMD_DEFINE_ARRAY__)) : __WEBPACK_AMD_DEFINE_FACTORY__), __WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));else if ((typeof exports === 'undefined' ? 'undefined' : _typeof(exports)) === 'object') exports["Timeline"] = factory();else root["Timeline"] = factory();
 	})(undefined, function () {
-		return (/******/(function (modules) {
+		return (/******/function (modules) {
 				// webpackBootstrap
 				/******/ // The module cache
 				/******/var installedModules = {};
@@ -7578,21 +7679,18 @@
 				/******/ // Load entry module and return exports
 				/******/return __webpack_require__(0);
 				/******/
-			})(
+			}(
 			/************************************************************************/
 			/******/[
 			/* 0 */
-			function (module, exports, __webpack_require__) {
+			/***/function (module, exports, __webpack_require__) {
 
 				'use strict';
 
-				Object.defineProperty(exports, '__esModule', {
+				Object.defineProperty(exports, "__esModule", {
 					value: true
 				});
-
-				function _interopRequireDefault(obj) {
-					return obj && obj.__esModule ? obj : { 'default': obj };
-				}
+				exports.MotionTween = exports.Tween = exports.InteractiveTimeline = exports.Timeline = undefined;
 
 				var _timeline = __webpack_require__(1);
 
@@ -7610,19 +7708,23 @@
 
 				var _motionTween2 = _interopRequireDefault(_motionTween);
 
-				exports.Timeline = _timeline2['default'];
-				exports.InteractiveTimeline = _interactiveTimeline2['default'];
-				exports.Tween = _tween2['default'];
-				exports.MotionTween = _motionTween2['default'];
+				function _interopRequireDefault(obj) {
+					return obj && obj.__esModule ? obj : { default: obj };
+				}
+
+				exports.Timeline = _timeline2.default;
+				exports.InteractiveTimeline = _interactiveTimeline2.default;
+				exports.Tween = _tween2.default;
+				exports.MotionTween = _motionTween2.default;
 
 				/***/
 			},
 			/* 1 */
-			function (module, exports, __webpack_require__) {
+			/***/function (module, exports, __webpack_require__) {
 
-				'use strict';
+				"use strict";
 
-				Object.defineProperty(exports, '__esModule', {
+				Object.defineProperty(exports, "__esModule", {
 					value: true
 				});
 
@@ -7636,51 +7738,15 @@
 					}return target;
 				};
 
-				var _createClass = (function () {
+				var _createClass = function () {
 					function defineProperties(target, props) {
 						for (var i = 0; i < props.length; i++) {
-							var descriptor = props[i];descriptor.enumerable = descriptor.enumerable || false;descriptor.configurable = true;if ('value' in descriptor) descriptor.writable = true;Object.defineProperty(target, descriptor.key, descriptor);
+							var descriptor = props[i];descriptor.enumerable = descriptor.enumerable || false;descriptor.configurable = true;if ("value" in descriptor) descriptor.writable = true;Object.defineProperty(target, descriptor.key, descriptor);
 						}
 					}return function (Constructor, protoProps, staticProps) {
 						if (protoProps) defineProperties(Constructor.prototype, protoProps);if (staticProps) defineProperties(Constructor, staticProps);return Constructor;
 					};
-				})();
-
-				var _get = function get(_x, _x2, _x3) {
-					var _again = true;_function: while (_again) {
-						var object = _x,
-						    property = _x2,
-						    receiver = _x3;_again = false;if (object === null) object = Function.prototype;var desc = Object.getOwnPropertyDescriptor(object, property);if (desc === undefined) {
-							var parent = Object.getPrototypeOf(object);if (parent === null) {
-								return undefined;
-							} else {
-								_x = parent;_x2 = property;_x3 = receiver;_again = true;desc = parent = undefined;continue _function;
-							}
-						} else if ('value' in desc) {
-							return desc.value;
-						} else {
-							var getter = desc.get;if (getter === undefined) {
-								return undefined;
-							}return getter.call(receiver);
-						}
-					}
-				};
-
-				function _interopRequireDefault(obj) {
-					return obj && obj.__esModule ? obj : { 'default': obj };
-				}
-
-				function _classCallCheck(instance, Constructor) {
-					if (!(instance instanceof Constructor)) {
-						throw new TypeError('Cannot call a class as a function');
-					}
-				}
-
-				function _inherits(subClass, superClass) {
-					if (typeof superClass !== 'function' && superClass !== null) {
-						throw new TypeError('Super expression must either be null or a function, not ' + typeof superClass);
-					}subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } });if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass;
-				}
+				}();
 
 				var _timelineState = __webpack_require__(2);
 
@@ -7690,40 +7756,53 @@
 
 				var _tween2 = _interopRequireDefault(_tween);
 
+				function _interopRequireDefault(obj) {
+					return obj && obj.__esModule ? obj : { default: obj };
+				}
+
+				function _classCallCheck(instance, Constructor) {
+					if (!(instance instanceof Constructor)) {
+						throw new TypeError("Cannot call a class as a function");
+					}
+				}
+
+				function _possibleConstructorReturn(self, call) {
+					if (!self) {
+						throw new ReferenceError("this hasn't been initialised - super() hasn't been called");
+					}return call && ((typeof call === 'undefined' ? 'undefined' : _typeof(call)) === "object" || typeof call === "function") ? call : self;
+				}
+
+				function _inherits(subClass, superClass) {
+					if (typeof superClass !== "function" && superClass !== null) {
+						throw new TypeError("Super expression must either be null or a function, not " + (typeof superClass === 'undefined' ? 'undefined' : _typeof(superClass)));
+					}subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } });if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass;
+				}
+
 				var _TIMELINE_DEFAULT_OPTIONS = {
 					fps: 60
 				};
 
 				var _CHILD_DEFAULT_OPTIONS = {
 					fillMode: "both",
-					'in': null,
+					in: null,
 					loop: false,
 					out: null,
 					time: null
 				};
 
-				var Timeline = (function (_Tween) {
+				var Timeline = function (_Tween) {
 					_inherits(Timeline, _Tween);
-
-					_createClass(Timeline, null, [{
-						key: 'FILL_MODE',
-						value: {
-							NONE: "none",
-							FORWARD: "forward",
-							BACKWARD: "backward",
-							BOTH: "both"
-						},
-						enumerable: true
-					}]);
 
 					function Timeline(name, keyframesObject, options) {
 						_classCallCheck(this, Timeline);
 
-						_get(Object.getPrototypeOf(Timeline.prototype), 'constructor', this).call(this, name, keyframesObject, options);
+						var _this = _possibleConstructorReturn(this, Object.getPrototypeOf(Timeline).call(this, name, keyframesObject, options));
 
-						this._children = [];
-						this._currentTime = 0;
-						this._options = _extends({}, _TIMELINE_DEFAULT_OPTIONS, options);
+						_this._children = [];
+						_this._currentTime = 0;
+
+						_this._options = _extends({}, _TIMELINE_DEFAULT_OPTIONS, options);
+						return _this;
 					}
 
 					/*________________________________________________________
@@ -7765,8 +7844,8 @@
 							}
 
 							// set in property if not already set
-							if (o.settings['in'] == null) {
-								o.settings['in'] = o.settings.time;
+							if (o.settings.in == null) {
+								o.settings.in = o.settings.time;
 							}
 
 							// set out property if not already set
@@ -7795,15 +7874,15 @@
 								throw Error("Incorrectly set fillMode: " + settings.fillMode);
 							}
 
-							if (settings['in'] < settings.time) {
+							if (settings.in < settings.time) {
 								throw Error("The 'in' option can't preceed the 'time' option");
 							}
 
-							if (settings['in'] > settings.out) {
+							if (settings.in > settings.out) {
 								throw Error("The 'in' option can't be after the 'out' option");
 							}
 
-							if (settings.out < settings.time || settings.out < settings['in']) {
+							if (settings.out < settings.time || settings.out < settings.in) {
 								throw Error("The 'out' option can't preceed the 'time' or 'in' option");
 							}
 						}
@@ -7825,17 +7904,21 @@
 					}, {
 						key: '_getState',
 						value: function _getState(time) {
-							var _this = this;
+							var _this2 = this;
 
-							var state = new _timelineState2['default'](_timelineState2['default'].TYPE.TIMELINE, this._name);
-							var tweenState = undefined,
-							    resolvedTime = undefined;
+							var state = new _timelineState2.default(_timelineState2.default.TYPE.TIMELINE, this._name);
+							var tweenState = void 0,
+							    resolvedTime = void 0;
 
 							// Check to see if we have specified the 'timeRemap' property,
 							// if so remap time and then obtain state
 							if (this._propertyKeyframesMap.size > 0) {
 								if (this._propertyKeyframesMap.has("timeRemap")) {
 									var keyframes = this._propertyKeyframesMap.get("timeRemap");
+
+									// @TODO if time comes in here undefined then it is resolved to null,
+									// where we usually expect an undefined to deliver us a null state property value
+									// resolved time is returning as 0, and therefore we are not getting the correct state
 
 									time = this._getTimeRemapTweenValue(keyframes, time);
 								}
@@ -7844,7 +7927,7 @@
 							this._children.forEach(function (childObjectData, index) {
 
 								// loop is accounted for here, fill is automatically built into tween
-								resolvedTime = _this._resolveChildRelativeTime(time, childObjectData.settings);
+								resolvedTime = _this2._resolveChildRelativeTime(time, childObjectData.settings);
 
 								tweenState = childObjectData.child.getState(resolvedTime);
 
@@ -7861,13 +7944,14 @@
 	      * @param {Number} time Time in milisecond
 	      * @return Number
 	      */
+
 					}, {
 						key: '_loopTime',
 						value: function _loopTime(time, childSettings) {
-							var childEditDuration = childSettings.out - childSettings['in'];
-							var realativeTime = time - childSettings['in'];
+							var childEditDuration = childSettings.out - childSettings.in;
+							var realativeTime = time - childSettings.in;
 							var loopedTime = (realativeTime % childEditDuration + childEditDuration) % childEditDuration;
-							return childSettings['in'] + loopedTime;
+							return childSettings.in + loopedTime;
 						}
 
 						/**
@@ -7877,19 +7961,20 @@
 	      * @param {Number} time Time in milisecond
 	      * @return Number
 	      */
+
 					}, {
 						key: '_resolveChildRelativeTime',
 						value: function _resolveChildRelativeTime(time, childSettings) {
 							// now we have the beginning position of the child we can determine the time relative to the child
 							var childRelativeTime = time - childSettings.time;
 
-							if (time < childSettings['in']) {
+							if (time < childSettings.in) {
 								if (childSettings.fillMode === Timeline.FILL_MODE.BACKWARD || childSettings.fillMode === Timeline.FILL_MODE.BOTH) {
 
 									if (childSettings.loop) {
 										return this._loopTime(time, childSettings) - childSettings.time;
 									} else {
-										return childSettings['in'] - childSettings.time;
+										return childSettings.in - childSettings.time;
 									}
 								} else {
 									return undefined;
@@ -7919,15 +8004,16 @@
 	      * @param {Number} time Time in milisecond
 	      * @return Number
 	      */
+
 					}, {
 						key: '_getTimeRemapTweenValue',
 						value: function _getTimeRemapTweenValue(keyframes, time) {
 							var value = null;
 							// interate over keyframes untill we find the exact value or keyframes either side
 							var length = keyframes.length;
-							var keyframe = undefined,
-							    keyframeValue = undefined;
-							var lastKeyframe = undefined;
+							var keyframe = void 0,
+							    keyframeValue = void 0;
+							var lastKeyframe = void 0;
 
 							// the aim here is to find the keyframe to either side of the time value
 
@@ -8023,15 +8109,20 @@
 					}]);
 
 					return Timeline;
-				})(_tween2['default']);
+				}(_tween2.default);
 
-				exports['default'] = Timeline;
-				module.exports = exports['default'];
+				Timeline.FILL_MODE = {
+					NONE: "none",
+					FORWARD: "forward",
+					BACKWARD: "backward",
+					BOTH: "both"
+				};
+				exports.default = Timeline;
 
 				/***/
 			},
 			/* 2 */
-			function (module, exports) {
+			/***/function (module, exports) {
 
 				"use strict";
 
@@ -8039,7 +8130,7 @@
 					value: true
 				});
 
-				var _createClass = (function () {
+				var _createClass = function () {
 					function defineProperties(target, props) {
 						for (var i = 0; i < props.length; i++) {
 							var descriptor = props[i];descriptor.enumerable = descriptor.enumerable || false;descriptor.configurable = true;if ("value" in descriptor) descriptor.writable = true;Object.defineProperty(target, descriptor.key, descriptor);
@@ -8047,7 +8138,7 @@
 					}return function (Constructor, protoProps, staticProps) {
 						if (protoProps) defineProperties(Constructor.prototype, protoProps);if (staticProps) defineProperties(Constructor, staticProps);return Constructor;
 					};
-				})();
+				}();
 
 				function _classCallCheck(instance, Constructor) {
 					if (!(instance instanceof Constructor)) {
@@ -8055,16 +8146,7 @@
 					}
 				}
 
-				var TimelineState = (function () {
-					_createClass(TimelineState, null, [{
-						key: "TYPE",
-						value: {
-							TWEEN: "tween",
-							TIMELINE: "timeline"
-						},
-						enumerable: true
-					}]);
-
+				var TimelineState = function () {
 					function TimelineState(type, name) {
 						_classCallCheck(this, TimelineState);
 
@@ -8122,19 +8204,22 @@
 					}]);
 
 					return TimelineState;
-				})();
+				}();
 
-				exports["default"] = TimelineState;
-				module.exports = exports["default"];
+				TimelineState.TYPE = {
+					TWEEN: "tween",
+					TIMELINE: "timeline"
+				};
+				exports.default = TimelineState;
 
 				/***/
 			},
 			/* 3 */
-			function (module, exports, __webpack_require__) {
+			/***/function (module, exports, __webpack_require__) {
 
-				'use strict';
+				"use strict";
 
-				Object.defineProperty(exports, '__esModule', {
+				Object.defineProperty(exports, "__esModule", {
 					value: true
 				});
 
@@ -8148,25 +8233,15 @@
 					}return target;
 				};
 
-				var _createClass = (function () {
+				var _createClass = function () {
 					function defineProperties(target, props) {
 						for (var i = 0; i < props.length; i++) {
-							var descriptor = props[i];descriptor.enumerable = descriptor.enumerable || false;descriptor.configurable = true;if ('value' in descriptor) descriptor.writable = true;Object.defineProperty(target, descriptor.key, descriptor);
+							var descriptor = props[i];descriptor.enumerable = descriptor.enumerable || false;descriptor.configurable = true;if ("value" in descriptor) descriptor.writable = true;Object.defineProperty(target, descriptor.key, descriptor);
 						}
 					}return function (Constructor, protoProps, staticProps) {
 						if (protoProps) defineProperties(Constructor.prototype, protoProps);if (staticProps) defineProperties(Constructor, staticProps);return Constructor;
 					};
-				})();
-
-				function _interopRequireDefault(obj) {
-					return obj && obj.__esModule ? obj : { 'default': obj };
-				}
-
-				function _classCallCheck(instance, Constructor) {
-					if (!(instance instanceof Constructor)) {
-						throw new TypeError('Cannot call a class as a function');
-					}
-				}
+				}();
 
 				var _motionTween = __webpack_require__(4);
 
@@ -8180,7 +8255,17 @@
 
 				var _timelineAbstract2 = _interopRequireDefault(_timelineAbstract);
 
-				var Tween = (function () {
+				function _interopRequireDefault(obj) {
+					return obj && obj.__esModule ? obj : { default: obj };
+				}
+
+				function _classCallCheck(instance, Constructor) {
+					if (!(instance instanceof Constructor)) {
+						throw new TypeError("Cannot call a class as a function");
+					}
+				}
+
+				var Tween = function () {
 					function Tween(name, keyframesObject) {
 						_classCallCheck(this, Tween);
 
@@ -8232,7 +8317,7 @@
 						value: function _addKeyframes(keyframesObject) {
 							var _this = this;
 
-							var keyframes = undefined;
+							var keyframes = void 0;
 
 							Object.keys(keyframesObject).map(function (key, index) {
 
@@ -8251,6 +8336,7 @@
 	      * @param {Array} keyframes An Array of keyframe objects
 	      * @returns Array
 	      */
+
 					}, {
 						key: '_cloneKeyframes',
 						value: function _cloneKeyframes(keyframes) {
@@ -8281,12 +8367,13 @@
 	      * @param {Number} time Time in milisecond
 	      * @return Object
 	      */
+
 					}, {
 						key: '_getState',
 						value: function _getState(time) {
 							var _this2 = this;
 
-							var state = new _timelineState2['default'](_timelineState2['default'].TYPE.TWEEN, this._name);
+							var state = new _timelineState2.default(_timelineState2.default.TYPE.TWEEN, this._name);
 
 							this._propertyKeyframesMap.forEach(function (keyframes, property) {
 
@@ -8304,15 +8391,16 @@
 	      * @param {Number} time Time in milisecond
 	      * @return Number
 	      */
+
 					}, {
 						key: '_getTweenValue',
 						value: function _getTweenValue(keyframes, time) {
 							var value = null;
 							// interate over keyframes untill we find the exact value or keyframes either side
 							var length = keyframes.length;
-							var keyframe = undefined,
-							    keyframeValue = undefined;
-							var lastKeyframe = undefined;
+							var keyframe = void 0,
+							    keyframeValue = void 0;
+							var lastKeyframe = void 0;
 
 							// the aim here is to find the keyframe to either side of the time value
 
@@ -8367,6 +8455,7 @@
 	     * @param {Number} time Time in milisecond
 	     * @return Number
 	     */
+
 					}, {
 						key: '_tweenBetweenKeyframes',
 						value: function _tweenBetweenKeyframes(lastKeyframe, keyframe, time) {
@@ -8383,7 +8472,7 @@
 									animatorOptions = _extends({}, animatorOptions, lastKeyframe.animatorOptions);
 								}
 
-								easedDelta = _motionTween2['default'].getValue(lastKeyframe.animatorType, animatorOptions, deltaFloat);
+								easedDelta = _motionTween2.default.getValue(lastKeyframe.animatorType, animatorOptions, deltaFloat);
 							}
 
 							var valueDifference = keyframe.value - lastKeyframe.value;
@@ -8404,15 +8493,14 @@
 					}]);
 
 					return Tween;
-				})();
+				}();
 
-				exports['default'] = Tween;
-				module.exports = exports['default'];
+				exports.default = Tween;
 
 				/***/
 			},
 			/* 4 */
-			function (module, exports, __webpack_require__) {
+			/***/function (module, exports, __webpack_require__) {
 
 				"use strict";
 
@@ -8420,7 +8508,7 @@
 					value: true
 				});
 
-				var _createClass = (function () {
+				var _createClass = function () {
 					function defineProperties(target, props) {
 						for (var i = 0; i < props.length; i++) {
 							var descriptor = props[i];descriptor.enumerable = descriptor.enumerable || false;descriptor.configurable = true;if ("value" in descriptor) descriptor.writable = true;Object.defineProperty(target, descriptor.key, descriptor);
@@ -8428,7 +8516,7 @@
 					}return function (Constructor, protoProps, staticProps) {
 						if (protoProps) defineProperties(Constructor.prototype, protoProps);if (staticProps) defineProperties(Constructor, staticProps);return Constructor;
 					};
-				})();
+				}();
 
 				function _interopRequireWildcard(obj) {
 					if (obj && obj.__esModule) {
@@ -8480,7 +8568,7 @@
 
 				var _animatorsSpringRK42 = _interopRequireDefault(_animatorsSpringRK4);
 
-				var MotionTween = (function () {
+				var MotionTween = function () {
 					_createClass(MotionTween, null, [{
 						key: "DEFAULT_OPTIONS",
 						value: {
@@ -8655,7 +8743,7 @@
 					}]);
 
 					return MotionTween;
-				})();
+				}();
 
 				exports["default"] = MotionTween;
 				module.exports = exports["default"];
@@ -8663,7 +8751,7 @@
 				/***/
 			},
 			/* 5 */
-			function (module, exports) {
+			/***/function (module, exports) {
 
 				'use strict';
 
@@ -8671,7 +8759,7 @@
 					value: true
 				});
 
-				var _createClass = (function () {
+				var _createClass = function () {
 					function defineProperties(target, props) {
 						for (var i = 0; i < props.length; i++) {
 							var descriptor = props[i];descriptor.enumerable = descriptor.enumerable || false;descriptor.configurable = true;if ('value' in descriptor) descriptor.writable = true;Object.defineProperty(target, descriptor.key, descriptor);
@@ -8679,7 +8767,7 @@
 					}return function (Constructor, protoProps, staticProps) {
 						if (protoProps) defineProperties(Constructor.prototype, protoProps);if (staticProps) defineProperties(Constructor, staticProps);return Constructor;
 					};
-				})();
+				}();
 
 				function _classCallCheck(instance, Constructor) {
 					if (!(instance instanceof Constructor)) {
@@ -8687,7 +8775,7 @@
 					}
 				}
 
-				var Utils = (function () {
+				var Utils = function () {
 					function Utils() {
 						_classCallCheck(this, Utils);
 					}
@@ -8728,7 +8816,7 @@
 					}]);
 
 					return Utils;
-				})();
+				}();
 
 				exports['default'] = new Utils();
 
@@ -8763,7 +8851,7 @@
 				/***/
 			},
 			/* 6 */
-			function (module, exports) {
+			/***/function (module, exports) {
 
 				// t: current time, b: begInnIng value, c: change In value, d: duration
 				"use strict";
@@ -8967,7 +9055,7 @@
 				/***/
 			},
 			/* 7 */
-			function (module, exports) {
+			/***/function (module, exports) {
 
 				"use strict";
 
@@ -8985,7 +9073,7 @@
 					}return target;
 				};
 
-				var _createClass = (function () {
+				var _createClass = function () {
 					function defineProperties(target, props) {
 						for (var i = 0; i < props.length; i++) {
 							var descriptor = props[i];descriptor.enumerable = descriptor.enumerable || false;descriptor.configurable = true;if ("value" in descriptor) descriptor.writable = true;Object.defineProperty(target, descriptor.key, descriptor);
@@ -8993,7 +9081,7 @@
 					}return function (Constructor, protoProps, staticProps) {
 						if (protoProps) defineProperties(Constructor.prototype, protoProps);if (staticProps) defineProperties(Constructor, staticProps);return Constructor;
 					};
-				})();
+				}();
 
 				function _classCallCheck(instance, Constructor) {
 					if (!(instance instanceof Constructor)) {
@@ -9001,7 +9089,7 @@
 					}
 				}
 
-				var CubicBezier = (function () {
+				var CubicBezier = function () {
 					_createClass(CubicBezier, null, [{
 						key: "DEFAULT_OPTIONS",
 						value: {
@@ -9074,7 +9162,7 @@
 					}]);
 
 					return CubicBezier;
-				})();
+				}();
 
 				exports["default"] = CubicBezier;
 				module.exports = exports["default"];
@@ -9082,7 +9170,7 @@
 				/***/
 			},
 			/* 8 */
-			function (module, exports, __webpack_require__) {
+			/***/function (module, exports, __webpack_require__) {
 
 				"use strict";
 
@@ -9100,7 +9188,7 @@
 					}return target;
 				};
 
-				var _createClass = (function () {
+				var _createClass = function () {
 					function defineProperties(target, props) {
 						for (var i = 0; i < props.length; i++) {
 							var descriptor = props[i];descriptor.enumerable = descriptor.enumerable || false;descriptor.configurable = true;if ("value" in descriptor) descriptor.writable = true;Object.defineProperty(target, descriptor.key, descriptor);
@@ -9108,7 +9196,7 @@
 					}return function (Constructor, protoProps, staticProps) {
 						if (protoProps) defineProperties(Constructor.prototype, protoProps);if (staticProps) defineProperties(Constructor, staticProps);return Constructor;
 					};
-				})();
+				}();
 
 				function _interopRequireWildcard(obj) {
 					if (obj && obj.__esModule) {
@@ -9132,7 +9220,7 @@
 
 				var Easing = _interopRequireWildcard(_Easing);
 
-				var Ease = (function () {
+				var Ease = function () {
 					_createClass(Ease, null, [{
 						key: "DEFAULT_OPTIONS",
 						value: {
@@ -9177,7 +9265,7 @@
 					}]);
 
 					return Ease;
-				})();
+				}();
 
 				exports["default"] = Ease;
 				module.exports = exports["default"];
@@ -9185,7 +9273,7 @@
 				/***/
 			},
 			/* 9 */
-			function (module, exports) {
+			/***/function (module, exports) {
 
 				"use strict";
 
@@ -9203,7 +9291,7 @@
 					}return target;
 				};
 
-				var _createClass = (function () {
+				var _createClass = function () {
 					function defineProperties(target, props) {
 						for (var i = 0; i < props.length; i++) {
 							var descriptor = props[i];descriptor.enumerable = descriptor.enumerable || false;descriptor.configurable = true;if ("value" in descriptor) descriptor.writable = true;Object.defineProperty(target, descriptor.key, descriptor);
@@ -9211,7 +9299,7 @@
 					}return function (Constructor, protoProps, staticProps) {
 						if (protoProps) defineProperties(Constructor.prototype, protoProps);if (staticProps) defineProperties(Constructor, staticProps);return Constructor;
 					};
-				})();
+				}();
 
 				function _classCallCheck(instance, Constructor) {
 					if (!(instance instanceof Constructor)) {
@@ -9219,7 +9307,7 @@
 					}
 				}
 
-				var Friction = (function () {
+				var Friction = function () {
 					_createClass(Friction, null, [{
 						key: "DEFAULT_OPTIONS",
 						value: {
@@ -9272,7 +9360,7 @@
 					}]);
 
 					return Friction;
-				})();
+				}();
 
 				exports["default"] = Friction;
 				module.exports = exports["default"];
@@ -9280,7 +9368,7 @@
 				/***/
 			},
 			/* 10 */
-			function (module, exports) {
+			/***/function (module, exports) {
 
 				"use strict";
 
@@ -9298,7 +9386,7 @@
 					}return target;
 				};
 
-				var _createClass = (function () {
+				var _createClass = function () {
 					function defineProperties(target, props) {
 						for (var i = 0; i < props.length; i++) {
 							var descriptor = props[i];descriptor.enumerable = descriptor.enumerable || false;descriptor.configurable = true;if ("value" in descriptor) descriptor.writable = true;Object.defineProperty(target, descriptor.key, descriptor);
@@ -9306,7 +9394,7 @@
 					}return function (Constructor, protoProps, staticProps) {
 						if (protoProps) defineProperties(Constructor.prototype, protoProps);if (staticProps) defineProperties(Constructor, staticProps);return Constructor;
 					};
-				})();
+				}();
 
 				function _classCallCheck(instance, Constructor) {
 					if (!(instance instanceof Constructor)) {
@@ -9314,7 +9402,7 @@
 					}
 				}
 
-				var Spring = (function () {
+				var Spring = function () {
 					_createClass(Spring, null, [{
 						key: "DEFAULT_OPTIONS",
 						value: {
@@ -9363,7 +9451,7 @@
 					}]);
 
 					return Spring;
-				})();
+				}();
 
 				exports["default"] = Spring;
 				module.exports = exports["default"];
@@ -9371,7 +9459,7 @@
 				/***/
 			},
 			/* 11 */
-			function (module, exports) {
+			/***/function (module, exports) {
 
 				// r4k from http://mtdevans.com/2013/05/fourth-order-runge-kutta-algorithm-in-javascript-with-demo/
 				"use strict";
@@ -9390,7 +9478,7 @@
 					}return target;
 				};
 
-				var _createClass = (function () {
+				var _createClass = function () {
 					function defineProperties(target, props) {
 						for (var i = 0; i < props.length; i++) {
 							var descriptor = props[i];descriptor.enumerable = descriptor.enumerable || false;descriptor.configurable = true;if ("value" in descriptor) descriptor.writable = true;Object.defineProperty(target, descriptor.key, descriptor);
@@ -9398,7 +9486,7 @@
 					}return function (Constructor, protoProps, staticProps) {
 						if (protoProps) defineProperties(Constructor.prototype, protoProps);if (staticProps) defineProperties(Constructor, staticProps);return Constructor;
 					};
-				})();
+				}();
 
 				function _classCallCheck(instance, Constructor) {
 					if (!(instance instanceof Constructor)) {
@@ -9406,7 +9494,7 @@
 					}
 				}
 
-				var SpringRK4 = (function () {
+				var SpringRK4 = function () {
 					_createClass(SpringRK4, null, [{
 						key: "DEFAULT_OPTIONS",
 						value: {
@@ -9490,7 +9578,7 @@
 					}]);
 
 					return SpringRK4;
-				})();
+				}();
 
 				exports["default"] = SpringRK4;
 				module.exports = exports["default"];
@@ -9498,7 +9586,7 @@
 				/***/
 			},
 			/* 12 */
-			function (module, exports) {
+			/***/function (module, exports) {
 
 				"use strict";
 
@@ -9516,7 +9604,7 @@
 					}return target;
 				};
 
-				var _createClass = (function () {
+				var _createClass = function () {
 					function defineProperties(target, props) {
 						for (var i = 0; i < props.length; i++) {
 							var descriptor = props[i];descriptor.enumerable = descriptor.enumerable || false;descriptor.configurable = true;if ("value" in descriptor) descriptor.writable = true;Object.defineProperty(target, descriptor.key, descriptor);
@@ -9524,7 +9612,7 @@
 					}return function (Constructor, protoProps, staticProps) {
 						if (protoProps) defineProperties(Constructor.prototype, protoProps);if (staticProps) defineProperties(Constructor, staticProps);return Constructor;
 					};
-				})();
+				}();
 
 				function _classCallCheck(instance, Constructor) {
 					if (!(instance instanceof Constructor)) {
@@ -9534,23 +9622,12 @@
 
 				var _DEFAULT_OPTIONS = {
 					loop: false,
-					"in": 0,
+					in: 0,
 					out: null,
 					fillMode: 0
 				};
 
-				var TimelineAbstract = (function () {
-					_createClass(TimelineAbstract, null, [{
-						key: "FILL_MODE",
-						value: {
-							NOME: 0,
-							FORWARD: 1,
-							BACKWARD: 2,
-							BOTH: 3
-						},
-						enumerable: true
-					}]);
-
+				var TimelineAbstract = function () {
 					function TimelineAbstract(name, options) {
 						_classCallCheck(this, TimelineAbstract);
 
@@ -9596,31 +9673,32 @@
 	      *
 	      * @private
 	      */
+
 					}, {
 						key: "_updateRelativeDuration",
 						value: function _updateRelativeDuration(absoluteDuration) {
 							var inIndex = -1;
 							var duration = absoluteDuration;
 
-							if (this._options["in"] == null) {
-								this._options["in"] = 0;
+							if (this._options.in == null) {
+								this._options.in = 0;
 							} else {
 								// adjust the duration
-								if (this._options["in"] > duration) {
+								if (this._options.in > duration) {
 									throw Error("In point is set beyond the end of the tween!");
 								}
-								duration -= this._options["in"];
+								duration -= this._options.in;
 							}
 
 							if (this._options.out != null) {
-								duration = this._options.out - this._options["in"];
+								duration = this._options.out - this._options.in;
 							} else {
-								this._options.out = this._options["in"] + duration;
+								this._options.out = this._options.in + duration;
 							}
 
 							this._duration = duration;
 
-							if (this._options["in"] > this._options.out) {
+							if (this._options.in > this._options.out) {
 								throw Error("tween in is greater than out!");
 							}
 						}
@@ -9632,10 +9710,11 @@
 	      * @param {Number} time Time in milisecond
 	      * @return Number
 	      */
+
 					}, {
 						key: "_loopTime",
 						value: function _loopTime(time) {
-							return ((time - this._options["in"]) % this._duration + this._duration) % this._duration;
+							return ((time - this._options.in) % this._duration + this._duration) % this._duration;
 						}
 
 						/**
@@ -9645,10 +9724,11 @@
 	      * @param {Number} time Time in milisecond
 	      * @return Number
 	      */
+
 					}, {
 						key: "_resolveTime",
 						value: function _resolveTime(time) {
-							if (time < this._options["in"]) {
+							if (time < this._options.in) {
 								if (this._options.fillMode === TimelineAbstract.FILL_MODE.BACKWARD || this._options.fillMode === TimelineAbstract.FILL_MODE.BOTH) {
 									if (this._options.loop) {
 										return this._loopTime(time);
@@ -9679,7 +9759,7 @@
 					}, {
 						key: "in",
 						get: function get() {
-							return this._options["in"];
+							return this._options.in;
 						}
 					}, {
 						key: "out",
@@ -9699,80 +9779,73 @@
 					}]);
 
 					return TimelineAbstract;
-				})();
+				}();
 
-				exports["default"] = TimelineAbstract;
-				module.exports = exports["default"];
+				TimelineAbstract.FILL_MODE = {
+					NOME: 0,
+					FORWARD: 1,
+					BACKWARD: 2,
+					BOTH: 3
+				};
+				exports.default = TimelineAbstract;
 
 				/***/
 			},
 			/* 13 */
-			function (module, exports, __webpack_require__) {
+			/***/function (module, exports, __webpack_require__) {
 
-				'use strict';
+				"use strict";
 
-				Object.defineProperty(exports, '__esModule', {
+				Object.defineProperty(exports, "__esModule", {
 					value: true
 				});
 
-				var _createClass = (function () {
+				var _createClass = function () {
 					function defineProperties(target, props) {
 						for (var i = 0; i < props.length; i++) {
-							var descriptor = props[i];descriptor.enumerable = descriptor.enumerable || false;descriptor.configurable = true;if ('value' in descriptor) descriptor.writable = true;Object.defineProperty(target, descriptor.key, descriptor);
+							var descriptor = props[i];descriptor.enumerable = descriptor.enumerable || false;descriptor.configurable = true;if ("value" in descriptor) descriptor.writable = true;Object.defineProperty(target, descriptor.key, descriptor);
 						}
 					}return function (Constructor, protoProps, staticProps) {
 						if (protoProps) defineProperties(Constructor.prototype, protoProps);if (staticProps) defineProperties(Constructor, staticProps);return Constructor;
 					};
-				})();
-
-				var _get = function get(_x, _x2, _x3) {
-					var _again = true;_function: while (_again) {
-						var object = _x,
-						    property = _x2,
-						    receiver = _x3;_again = false;if (object === null) object = Function.prototype;var desc = Object.getOwnPropertyDescriptor(object, property);if (desc === undefined) {
-							var parent = Object.getPrototypeOf(object);if (parent === null) {
-								return undefined;
-							} else {
-								_x = parent;_x2 = property;_x3 = receiver;_again = true;desc = parent = undefined;continue _function;
-							}
-						} else if ('value' in desc) {
-							return desc.value;
-						} else {
-							var getter = desc.get;if (getter === undefined) {
-								return undefined;
-							}return getter.call(receiver);
-						}
-					}
-				};
-
-				function _interopRequireDefault(obj) {
-					return obj && obj.__esModule ? obj : { 'default': obj };
-				}
-
-				function _classCallCheck(instance, Constructor) {
-					if (!(instance instanceof Constructor)) {
-						throw new TypeError('Cannot call a class as a function');
-					}
-				}
-
-				function _inherits(subClass, superClass) {
-					if (typeof superClass !== 'function' && superClass !== null) {
-						throw new TypeError('Super expression must either be null or a function, not ' + typeof superClass);
-					}subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } });if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass;
-				}
+				}();
 
 				var _timeline = __webpack_require__(1);
 
 				var _timeline2 = _interopRequireDefault(_timeline);
 
-				var InteractiveTimeline = (function (_Timeline) {
+				function _interopRequireDefault(obj) {
+					return obj && obj.__esModule ? obj : { default: obj };
+				}
+
+				function _classCallCheck(instance, Constructor) {
+					if (!(instance instanceof Constructor)) {
+						throw new TypeError("Cannot call a class as a function");
+					}
+				}
+
+				function _possibleConstructorReturn(self, call) {
+					if (!self) {
+						throw new ReferenceError("this hasn't been initialised - super() hasn't been called");
+					}return call && ((typeof call === 'undefined' ? 'undefined' : _typeof(call)) === "object" || typeof call === "function") ? call : self;
+				}
+
+				function _inherits(subClass, superClass) {
+					if (typeof superClass !== "function" && superClass !== null) {
+						throw new TypeError("Super expression must either be null or a function, not " + (typeof superClass === 'undefined' ? 'undefined' : _typeof(superClass)));
+					}subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } });if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass;
+				}
+
+				var InteractiveTimeline = function (_Timeline) {
 					_inherits(InteractiveTimeline, _Timeline);
 
 					function InteractiveTimeline(name, options) {
 						_classCallCheck(this, InteractiveTimeline);
 
-						_get(Object.getPrototypeOf(InteractiveTimeline.prototype), 'constructor', this).call(this, name, options);
-						this._sequences = [];
+						var _this = _possibleConstructorReturn(this, Object.getPrototypeOf(InteractiveTimeline).call(this, name, options));
+
+						_this._sequences = [];
+						return _this;
 					}
 
 					/*________________________________________________________
@@ -9780,17 +9853,17 @@
 	    ________________________________________________________*/
 
 					_createClass(InteractiveTimeline, [{
-						key: 'increment',
+						key: "increment",
 						value: function increment(timeDelta) {
 							return this._increment(timeDelta);
 						}
 					}, {
-						key: 'setSequences',
+						key: "setSequences",
 						value: function setSequences(sequences) {
 							this._setSequences(sequences);
 						}
 					}, {
-						key: 'getSequences',
+						key: "getSequences",
 						value: function getSequences() {
 							return this._sequences;
 						}
@@ -9800,10 +9873,10 @@
 	     ________________________________________________________*/
 
 					}, {
-						key: '_increment',
+						key: "_increment",
 						value: function _increment(timeDelta) {
-							var outDelta = undefined,
-							    sequenceOutTime = undefined;
+							var outDelta = void 0,
+							    sequenceOutTime = void 0;
 
 							// get current sequence
 							var currentSequence = this._getSequenceByTime(this._currentTime);
@@ -9854,16 +9927,16 @@
 							return this._getState(this._currentTime);
 						}
 					}, {
-						key: '_setSequences',
+						key: "_setSequences",
 						value: function _setSequences(sequences) {
 							// merge sequence
 							// validate check for overlaping
 							this._sequences = sequences;
 						}
 					}, {
-						key: '_getSequenceByTime',
+						key: "_getSequenceByTime",
 						value: function _getSequenceByTime(time) {
-							var sequence = undefined;
+							var sequence = void 0;
 
 							for (var i = 0; i < this._sequences.length; i++) {
 								if (this._sequences[i].time > time) {
@@ -9885,7 +9958,7 @@
 							return null;
 						}
 					}, {
-						key: '_getSequenceByLabel',
+						key: "_getSequenceByLabel",
 						value: function _getSequenceByLabel(label) {
 							for (var i = 0; i < this._sequences.length; i++) {
 								if (this._sequences[i].label === label) {
@@ -9896,10 +9969,9 @@
 					}]);
 
 					return InteractiveTimeline;
-				})(_timeline2['default']);
+				}(_timeline2.default);
 
-				exports['default'] = InteractiveTimeline;
-				module.exports = exports['default'];
+				exports.default = InteractiveTimeline;
 
 				/***/
 			}
@@ -9907,7 +9979,7 @@
 		);
 	});
 	;
-	/***/ /***/ /***/ /***/ /***/ /***/ /***/ /***/ /***/ /***/ /***/ /***/ /***/ /***/
+	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(4)(module)))
 
 /***/ }
 /******/ ]);

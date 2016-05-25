@@ -88,7 +88,7 @@ return /******/ (function(modules) { // webpackBootstrap
 /* 1 */
 /***/ function(module, exports, __webpack_require__) {
 
-	'use strict';
+	"use strict";
 
 	Object.defineProperty(exports, "__esModule", {
 		value: true
@@ -541,7 +541,7 @@ return /******/ (function(modules) { // webpackBootstrap
 /* 3 */
 /***/ function(module, exports, __webpack_require__) {
 
-	'use strict';
+	"use strict";
 
 	Object.defineProperty(exports, "__esModule", {
 		value: true
@@ -1924,7 +1924,7 @@ return /******/ (function(modules) { // webpackBootstrap
 /* 13 */
 /***/ function(module, exports, __webpack_require__) {
 
-	'use strict';
+	"use strict";
 
 	Object.defineProperty(exports, "__esModule", {
 		value: true
@@ -1961,17 +1961,17 @@ return /******/ (function(modules) { // webpackBootstrap
 	 ________________________________________________________*/
 
 		_createClass(InteractiveTimeline, [{
-			key: 'increment',
+			key: "increment",
 			value: function increment(timeDelta) {
 				return this._increment(timeDelta);
 			}
 		}, {
-			key: 'setSequences',
+			key: "setSequences",
 			value: function setSequences(sequences) {
 				this._setSequences(sequences);
 			}
 		}, {
-			key: 'getSequences',
+			key: "getSequences",
 			value: function getSequences() {
 				return this._sequences;
 			}
@@ -1981,7 +1981,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	  ________________________________________________________*/
 
 		}, {
-			key: '_increment',
+			key: "_increment",
 			value: function _increment(timeDelta) {
 				var outDelta = void 0,
 				    sequenceOutTime = void 0;
@@ -2035,14 +2035,14 @@ return /******/ (function(modules) { // webpackBootstrap
 				return this._getState(this._currentTime);
 			}
 		}, {
-			key: '_setSequences',
+			key: "_setSequences",
 			value: function _setSequences(sequences) {
 				// merge sequence
 				// validate check for overlaping
 				this._sequences = sequences;
 			}
 		}, {
-			key: '_getSequenceByTime',
+			key: "_getSequenceByTime",
 			value: function _getSequenceByTime(time) {
 				var sequence = void 0;
 
@@ -2066,7 +2066,7 @@ return /******/ (function(modules) { // webpackBootstrap
 				return null;
 			}
 		}, {
-			key: '_getSequenceByLabel',
+			key: "_getSequenceByLabel",
 			value: function _getSequenceByLabel(label) {
 				for (var i = 0; i < this._sequences.length; i++) {
 					if (this._sequences[i].label === label) {

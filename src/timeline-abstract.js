@@ -1,5 +1,3 @@
-
-
 const _DEFAULT_OPTIONS = {
 	loop: false,
 	in: 0,

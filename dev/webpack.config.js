@@ -15,7 +15,7 @@ module.exports = {
 			{
 				test: /\.js?$/,
 				exclude: /(css|node_modules|scss)/,
-				loader: 'babel-loader?stage=0'
+				loader: 'babel-loader?presets[]=es2015,presets[]=stage-0'
 			},
 			{
 				test: /node_modules\/unidragger/,
