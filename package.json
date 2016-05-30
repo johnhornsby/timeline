@@ -37,5 +37,8 @@
     "babel-polyfill": "^6.3.14",
     "motion-tween": "git+https://github.com/johnhornsby/motion-tween.git#3bf3172",
     "wolfy87-eventemitter": "^4.2.11"
+  },
+  "babel": {
+    "presets" : ["es2015", "stage-0"]
   }
 }
