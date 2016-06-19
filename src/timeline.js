@@ -159,6 +159,8 @@ export default class Timeline extends Tween {
 				// where we usually expect an undefined to deliver us a null state property value
 				// resolved time is returning as 0, and therefore we are not getting the correct state
 
+				// 160619 this is now done, undefined in produces null out
+
 				time = this._getTimeRemapTweenValue(keyframes, time);
 			}
 		}
@@ -200,6 +202,12 @@ export default class Timeline extends Tween {
 	 * @return Number
 	 */
 	_resolveChildRelativeTime(time, childSettings) {
+		// brief check to see if the time is null or undefined, this may come as a result of attempting to obtain
+		// a time outside of the parents range, previously below return 0 resulting in incorrect resolved time.
+		if (time == null) {
+			return time;
+		}
+
 		// now we have the beginning position of the child we can determine the time relative to the child
 		const childRelativeTime = time - childSettings.time;
 		
