@@ -226,7 +226,9 @@ return /******/ (function(modules) { // webpackBootstrap
 			}
 		}, {
 			key: '_removeChild',
-			value: function _removeChild() {}
+			value: function _removeChild() {
+				// @TODO
+			}
 		}, {
 			key: '_getChildrenDuration',
 			value: function _getChildrenDuration() {
@@ -708,6 +710,12 @@ return /******/ (function(modules) { // webpackBootstrap
 			key: '_getTweenValue',
 			value: function _getTweenValue(keyframes, time) {
 				var value = null;
+
+				// here we check for time being null, which we can get if time has been remapped. And is outside of range.
+				if (time == null) {
+					return value;
+				}
+
 				// interate over keyframes untill we find the exact value or keyframes either side
 				var length = keyframes.length;
 				var keyframe = void 0,

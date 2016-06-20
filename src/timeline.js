@@ -128,7 +128,7 @@ export default class Timeline extends Tween {
 
 
 	_removeChild() {
-
+		// @TODO
 	}
 
 	
