@@ -195,4 +195,82 @@ describe('_getState', () => {
 		expect(state.children[0].children[0].properties.radius).toBeNull();
 		expect(state.children[0].children[1].properties.radius).toEqual(19);
 	});
+
+
+	it('returns the state of the timeline at a given time, utilising the time, in, out and duration options', () => {
+		let state;
+
+		const ringTween = new Tween("ring", {
+			radius: [
+				{
+					time: 0, value: 70
+				},
+				{
+					time: 200, value: 19
+				}
+			]
+		});
+
+		const rootTimeline = new Timeline("root-timeline");
+
+		rootTimeline.addChild(ringTween, {fillMode: Timeline.FILL_MODE.NONE, loop: false, out: 400 });
+		rootTimeline.addChild(ringTween, {fillMode: Timeline.FILL_MODE.FORWARD, loop: true });
+		rootTimeline.addChild(ringTween, {fillMode: Timeline.FILL_MODE.NONE, time: 0, in: 100 });
+		rootTimeline.addChild(ringTween, {fillMode: Timeline.FILL_MODE.NONE, out: 400 });
+
+		state = rootTimeline._getState(0);
+		expect(state.children[2].properties.radius).toBeNull();
+
+		state = rootTimeline._getState(100);
+		expect(state.children[2].properties.radius).toEqual(44.5);
+
+
+		state = rootTimeline._getState(300);
+		expect(state.children[0].properties.radius).toEqual(19);
+		expect(state.children[1].properties.radius).toEqual(44.5);
+		expect(state.children[3].properties.radius).toEqual(19);
+
+		state = rootTimeline._getState(500);
+		expect(state.children[0].properties.radius).toBeNull();
+
+
+	});
 });
+
+
+describe('_validateChildOptions', () => {
+	it('validate the settings passed in to set up a child on a timeline', () => {
+
+		const rootTimeline = new Timeline("root-timeline");
+		const func = rootTimeline._validateChildOptions;
+
+		expect(() => func({
+			fillMode: "ko"
+		})).toThrow();
+
+		expect(() => func({
+			fillMode: 'none',
+			loop: false,
+			time: 400,
+			in: 300
+		})).toThrow();
+
+		expect(() => func({
+			fillMode: 'none',
+			loop: false,
+			out: 400,
+			in: 500
+		})).toThrow();
+
+		expect(() => func({
+			fillMode: 'none',
+			loop: false,
+			out: 400,
+			time: 500
+		})).toThrow();
+	});
+
+});
+
+
+

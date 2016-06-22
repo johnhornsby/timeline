@@ -1,6 +1,5 @@
 import MotionTween from 'motion-tween';
 import TimelineState from './timeline-state';
-import TimelineAbstract from './timeline-abstract'
 
 
 

@@ -110,19 +110,19 @@ export default class Timeline extends Tween {
 		const fillModes = Object.keys(Timeline.FILL_MODE).map( (key) => Timeline.FILL_MODE[key]);
 
 		if (fillModes.indexOf(settings.fillMode) === -1) {
-			throw Error("Incorrectly set fillMode: " + settings.fillMode);
+			throw new Error("Incorrectly set fillMode: " + settings.fillMode);
 		}
 
 		if (settings.in < settings.time) {
-			throw Error("The 'in' option can't preceed the 'time' option");
+			throw new Error("The 'in' option can't preceed the 'time' option");
 		}
 
 		if (settings.in > settings.out) {
-			throw Error("The 'in' option can't be after the 'out' option");
+			throw new Error("The 'in' option can't be after the 'out' option");
 		}
 
 		if (settings.out < settings.time || settings.out < settings.in) {
-			throw Error("The 'out' option can't preceed the 'time' or 'in' option");
+			throw new Error("The 'out' option can't preceed the 'time' or 'in' option");
 		}
 	}
 
